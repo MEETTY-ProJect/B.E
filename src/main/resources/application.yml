@@ -1,0 +1,9 @@
+server:
+    port: 8080
+
+spring:
+    jwt:
+        secret: ${SECRET_KEY}
+        token:
+            access-expiration-time: 43200000    # 12??
+            refresh-expiration-time: 604800000
