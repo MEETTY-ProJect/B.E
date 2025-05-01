@@ -3,7 +3,7 @@ server:
 
 spring:
     jwt:
-        secret: ${SECRET_KEY}
+        secret: ${JWT_SECRET}
         token:
             access-expiration-time: 43200000    # 12??
             refresh-expiration-time: 604800000
