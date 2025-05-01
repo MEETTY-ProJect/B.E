@@ -1,0 +1,13 @@
+server:
+  port: 8080
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:mariadb://34.64.218.29:3306/meetty_db
+    username: ${PROD_USERNAME}
+    password: ${PROD_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
