@@ -1,0 +1,48 @@
+package com.example.meetty.auth.entity;
+
+import com.example.meetty.image.entity.UserImageEntity;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDateTime;
+
+@Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "users")
+public class UserEntity {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
+    private Long userId;
+
+    @Column(name = "email", nullable = false)
+    private String email;
+
+    @Column(name = "password", nullable = false)
+    private String password;
+
+    @Column(name = "username", nullable = false)
+    private String username;
+
+    @Column(name = "address", nullable = false)
+    private String address;
+
+    @Column(name = "provider")
+    private String provider;
+
+    @Column(name = "provider_id")
+    private String providerId;
+
+    @Column(name = "role")
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @OneToOne(mappedBy = "userEntity", cascade = CascadeType.ALL)
+    private UserImageEntity userImageEntity;
+}
