@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -25,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
+@Tag(name = "회원 관련 API", description = "회원가입, 로그인, 회원탈퇴 같이 회원 데이터와 관련된 API")
 public class AuthController {
 
     private final UserService userService;
@@ -58,6 +60,6 @@ public class AuthController {
 
         userService.signUp(signUpDto, profileImage);
 
-        return ResponseEntity.ok(ApiResponse.success("회원가입이 완료되었습니다."));
+        return ResponseEntity.ok(ApiResponse.success("회원가입이 완료되었습니다. 이메일 인증을 완료해주세요."));
     }
 }
