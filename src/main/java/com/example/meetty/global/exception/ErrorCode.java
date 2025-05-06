@@ -26,7 +26,8 @@ public enum ErrorCode {
     // Email 에러코드
     EMAIL_SEND_FAIL(HttpStatus.BAD_REQUEST, "이메일 전송에 실패하였습니다."),
     INVALID_EMAIL_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 이메일 인증 토큰입니다."),
-    EMAIL_ALREADY_VERIFIED(HttpStatus.CONFLICT, "이미 인증한 이메일 입니다")
+    EMAIL_ALREADY_VERIFIED(HttpStatus.CONFLICT, "이미 인증한 이메일 입니다"),
+    EMAIL_NOT_VERIFIED(HttpStatus.UNAUTHORIZED, "이메일 인증이 완료되지 않은 유저입니다.")
 
     ;
 
