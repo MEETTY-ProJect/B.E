@@ -24,7 +24,7 @@ repositories {
 }
 
 dependencies {
-    //web
+    // web
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -60,7 +60,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     testImplementation 'org.springframework.security:spring-security-test'
 
-    //dev tools
+    // dev tools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
     // oauth2
@@ -68,6 +68,12 @@ dependencies {
 
     // localDateTime
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    // redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // e-mail
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 }
 
 tasks.named('test') {
