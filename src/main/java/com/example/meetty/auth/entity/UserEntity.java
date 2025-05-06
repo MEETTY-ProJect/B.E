@@ -40,6 +40,9 @@ public class UserEntity {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
+    @Column(name = "is_verified", nullable = false)
+    private boolean isVerified = false;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
