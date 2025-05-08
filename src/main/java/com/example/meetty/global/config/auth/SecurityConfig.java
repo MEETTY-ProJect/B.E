@@ -50,24 +50,6 @@ public class SecurityConfig {
                             response.getWriter().write("{\"error\": \"Unauthorized\"}");
                         })
                 )
-                .logout((logout) -> logout
-                        .logoutUrl("/api/logout")
-                        .addLogoutHandler((request, response, authentication) -> {
-                            HttpSession session = request.getSession(false);
-                            if (session != null) {
-                                session.invalidate();
-                            }
-                            new SecurityContextLogoutHandler().logout(request, response, authentication);
-                        })
-                        .logoutSuccessHandler((request, response, authentication) -> {
-                            try {
-                                response.sendRedirect("/");
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        })
-                        .deleteCookies("JSESSIONID", "access_token")
-                )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

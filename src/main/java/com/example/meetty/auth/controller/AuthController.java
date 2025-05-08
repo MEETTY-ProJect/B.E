@@ -2,10 +2,12 @@ package com.example.meetty.auth.controller;
 
 import com.example.meetty.auth.dto.LoginRequestDto;
 import com.example.meetty.auth.dto.LoginResponseDto;
+import com.example.meetty.auth.dto.RefreshTokenResponseDto;
 import com.example.meetty.auth.dto.SignUpDto;
 import com.example.meetty.auth.entity.UserEntity;
 import com.example.meetty.auth.repository.UserRepository;
 import com.example.meetty.auth.service.UserService;
+import com.example.meetty.global.config.auth.CustomUserDetails;
 import com.example.meetty.global.dto.ApiResponse;
 import com.example.meetty.global.exception.AppException;
 import com.example.meetty.global.exception.ErrorCode;
@@ -15,12 +17,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -58,7 +63,7 @@ public class AuthController {
             )
             @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) throws Exception {
 
-        log.info("[POST]: 회원가입 요청");
+        log.info("[POST] 회원가입 요청");
 
         SignUpDto signUpDto = objectMapper.readValue(dtoJson, SignUpDto.class);
         validationService.validate(signUpDto);
@@ -74,7 +79,7 @@ public class AuthController {
             @RequestBody LoginRequestDto loginRequestDto,
             HttpServletResponse httpServletResponse) {
 
-        log.info("[POST]: 로그인 요청");
+        log.info("[POST] 로그인 요청");
 
         UserEntity userEntity = userRepository.findByEmail(loginRequestDto.getEmail()).orElseThrow(
                 () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND, ErrorCode.USER_EMAIL_NOT_FOUND.getMessage())
@@ -91,5 +96,37 @@ public class AuthController {
         } catch (AppException e) {
             return ResponseEntity.status(e.getErrorCode().getHttpStatus()).body(ApiResponse.fail(e.getErrorCode()));
         }
+    }
+
+    @Operation(summary = "토큰 재발급", description = "쿠키에 저장된 refresh_token을 활용하여 토큰을 재발급하는 API")
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<RefreshTokenResponseDto>> refreshToken(
+            HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
+
+        log.info("[POST] 토큰 재발급 요청");
+
+        try {
+            RefreshTokenResponseDto refreshTokenResponseDto = userService.refreshToken(httpServletRequest, httpServletResponse);
+            return ResponseEntity.ok(ApiResponse.success(refreshTokenResponseDto));
+        } catch (AppException e) {
+            log.warn("❗토큰 재발급 실패: {}", e.getMessage(), e);
+            return ResponseEntity.status(e.getErrorCode().getHttpStatus())
+                    .body(ApiResponse.fail(e.getErrorCode()));
+        }
+    }
+
+    @Operation(summary = "로그아웃", description = "로그아웃 API.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            HttpServletResponse response) {
+
+        String email = customUserDetails.getUsername();
+        userService.logout(email, response);
+
+        log.info("[POST] 로그아웃: {}", email);
+
+        return ResponseEntity.ok(ApiResponse.success("로그아웃 되었습니다."));
     }
 }
