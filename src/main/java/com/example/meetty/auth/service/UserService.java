@@ -2,6 +2,7 @@ package com.example.meetty.auth.service;
 
 import com.example.meetty.auth.dto.LoginRequestDto;
 import com.example.meetty.auth.dto.LoginResponseDto;
+import com.example.meetty.auth.dto.RefreshTokenResponseDto;
 import com.example.meetty.auth.dto.SignUpDto;
 import com.example.meetty.auth.entity.UserEntity;
 import com.example.meetty.auth.entity.UserRole;
@@ -13,15 +14,19 @@ import com.example.meetty.global.mail.service.EmailService;
 import com.example.meetty.global.util.PasswordUtil;
 import com.example.meetty.image.service.UserImageService;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -35,6 +40,11 @@ public class UserService {
     private final RedisTemplate<String, String> redisTemplate;
     private final EmailService emailService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenRedisService refreshTokenRedisService;
+    @Value("${spring.jwt.token.refresh-expiration-time}")
+    private long refreshExpirationTime;
+    @Value("${spring.jwt.secure-cookie}")
+    private boolean secureCookie;
 
     public void signUp(SignUpDto signUpDto, MultipartFile profileImage) throws Exception {
         if (userRepository.findByEmail(signUpDto.getEmail()).isPresent()) {
@@ -87,8 +97,13 @@ public class UserService {
             throw new AppException(ErrorCode.NOT_EQUAL_PASSWORD, ErrorCode.NOT_EQUAL_PASSWORD.getMessage());
         }
 
-        String accessToken = jwtTokenProvider.createAccessToken(userEntity.getEmail(), userEntity.getRole().getType());
-        String refreshToken = jwtTokenProvider.createRefreshToken(userEntity.getEmail(), userEntity.getRole().getType());
+        String email = userEntity.getEmail();
+        String role = userEntity.getRole().getType();
+
+        String accessToken = jwtTokenProvider.createAccessToken(email, role);
+        String refreshToken = jwtTokenProvider.createRefreshToken(email, role);
+
+        refreshTokenRedisService.saveRefreshToken(email, refreshToken, Duration.ofMillis(refreshExpirationTime));
 
         httpServletResponse.addHeader("Authorization", "Bearer " + accessToken);
         Cookie refreshCookie = new Cookie("refresh_token", refreshToken);
@@ -100,7 +115,6 @@ public class UserService {
 
         log.info("✅ 로그인 성공 - 이메일: {}", userEntity.getEmail());
         log.info("🔑 AccessToken: {}", accessToken);
-        log.info("🔄 RefreshToken: {}", refreshToken);
 
         return LoginResponseDto.builder()
                 .accessToken(accessToken)
@@ -110,5 +124,81 @@ public class UserService {
                 .profileImage(userEntity.getUserImageEntity().getUrl())
                 .role(userEntity.getRole().getType())
                 .build();
+    }
+
+    @Transactional
+    public RefreshTokenResponseDto refreshToken(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
+        String refreshToken = getRefreshTokenFromCookie(httpServletRequest);
+
+        if (refreshToken == null || !jwtTokenProvider.validateToken(refreshToken)) {
+            throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.INVALID_REFRESH_TOKEN.getMessage());
+        }
+
+        String email = jwtTokenProvider.getEmailByToken(refreshToken);
+
+        String savedRefreshToken = refreshTokenRedisService.getRefreshTokenByEmail(email).orElseThrow(
+                () -> new AppException(ErrorCode.NOT_FOUND_REFRESH_TOKEN, ErrorCode.NOT_FOUND_REFRESH_TOKEN.getMessage())
+        );
+
+        if (!refreshToken.equals(savedRefreshToken)) {
+            throw new AppException(ErrorCode.INCORRECT_REFRESH_TOKEN, ErrorCode.INCORRECT_REFRESH_TOKEN.getMessage());
+        }
+
+        UserEntity userEntity = userRepository.findByEmail(email).orElseThrow(
+                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND, ErrorCode.USER_EMAIL_NOT_FOUND.getMessage())
+        );
+
+        String newAccessToken = jwtTokenProvider.createAccessToken(email, userEntity.getRole().getType());
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(email, userEntity.getRole().getType());
+
+        setRefreshTokenCookie(httpServletResponse, newRefreshToken);
+
+        refreshTokenRedisService.saveRefreshToken(email, newRefreshToken, Duration.ofMillis(refreshExpirationTime));
+
+        log.info("✅ 토큰 재발급 성공 - 이메일: {}", email);
+        log.info("🔑 AccessToken: {}", newAccessToken);
+
+        return new RefreshTokenResponseDto(newAccessToken, "토큰이 갱신되었습니다.");
+    }
+
+    // Cookie에서 refresh_token 가져오기
+    public String getRefreshTokenFromCookie(HttpServletRequest httpServletRequest) {
+        Cookie[] cookies = httpServletRequest.getCookies();
+
+        if (cookies == null || cookies.length == 0) {
+            throw new AppException(ErrorCode.NOT_FOUND_COOKIE, ErrorCode.NOT_FOUND_COOKIE.getMessage());
+        }
+
+        return Arrays.stream(cookies)
+                .filter(cookie -> "refresh_token".equals(cookie.getName()))
+                .map(Cookie::getValue)
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst()
+                .orElseThrow(
+                        () -> new AppException(ErrorCode.NOT_FOUND_REFRESH_TOKEN, ErrorCode.NOT_FOUND_REFRESH_TOKEN.getMessage())
+                );
+    }
+
+    // Cookie에 새로운 refresh_token 발급
+    public void setRefreshTokenCookie(HttpServletResponse httpServletResponse, String refreshToken) {
+        Cookie refreshCookie = new Cookie("refresh_token", refreshToken);
+
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setSecure(secureCookie);
+        refreshCookie.setPath("/");
+        refreshCookie.setMaxAge((int)refreshExpirationTime / 1000);
+
+        httpServletResponse.addCookie(refreshCookie);
+    }
+
+    public void logout(String email, HttpServletResponse response) {
+        refreshTokenRedisService.deleteToken(email);
+
+        Cookie cookie = new Cookie("refresh_token", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(secureCookie);
+        cookie.setPath("/");
+        cookie.setMaxAge(0); // 즉시 만료
+        response.addCookie(cookie);
     }
 }
