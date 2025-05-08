@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "chat_rooms")
@@ -23,6 +25,10 @@ public class ChatRooms {
 
     @Column(name = "create_at")
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "room")
+    private List<ChatMessage> chatMessages = new ArrayList<>();
+
 
 
 }
