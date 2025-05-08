@@ -26,7 +26,7 @@ public class ChatRooms {
     @Column(name = "create_at")
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "rooms")
+    @OneToMany(mappedBy = "room")
     private List<ChatMessage> chatMessages = new ArrayList<>();
 
 
