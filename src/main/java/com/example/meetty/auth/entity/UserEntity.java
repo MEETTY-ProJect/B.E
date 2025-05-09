@@ -1,10 +1,12 @@
 package com.example.meetty.auth.entity;
 
+import com.example.meetty.chat.entity.ChatMessage;
 import com.example.meetty.image.entity.UserImageEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Builder
@@ -49,6 +51,9 @@ public class UserEntity {
 
     @OneToOne(mappedBy = "userEntity", cascade = CascadeType.ALL)
     private UserImageEntity userImageEntity;
+
+    @OneToMany(mappedBy = "sender")
+    private List<ChatMessage> chatMessages = new ArrayList<>();
 
 
 }
