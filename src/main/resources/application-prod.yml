@@ -10,7 +10,7 @@ spring:
     url: jdbc:mariadb://34.64.218.29:3306/meetty_db
     username: ${PROD_USERNAME}
     password: ${PROD_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    driver-class-name: org.mariadb.jdbc.Driver
 
   jwt:
     secure-cookie: true
