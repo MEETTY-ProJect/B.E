@@ -23,5 +23,9 @@ spring:
             mail.smtp.starttls.enable: true
             mail.debug: true
 
+    config:
+        import:
+            - application-oauth2.yml
+
 app:
     base-url: http://localhost:8080
