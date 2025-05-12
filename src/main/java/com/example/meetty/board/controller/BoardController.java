@@ -37,37 +37,4 @@ public class BoardController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdGroup);
     }
 
-    @PostMapping("/{groupId}/join")
-    public ResponseEntity<?> requestJoinGroup(@PathVariable Long groupId) {
-        Long guestUserId = 2L;
-
-        try {
-            boardService.requestJoinGroup(groupId, guestUserId);
-            return ResponseEntity.ok("Invitation code sent to your email.");
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to process join request.");
-        }
-    }
-
-    // 그룹 참가 확정 엔드포인트 (초대 코드 검증)
-    @PostMapping("/{groupId}/join/confirm")
-    public ResponseEntity<?> confirmJoinGroup(@PathVariable Long groupId,
-                                              @Valid @RequestBody JoinRequestDTO request) {
-        Long guestUserId = 2L;
-
-        try {
-            StudyMembersEntity member = boardService.confirmJoinGroup(groupId, guestUserId, request.getInvitationCode());
-            return ResponseEntity.ok("Successfully joined the group! Member ID: " + member.getMemberId());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to confirm join request.");
-        }
-    }
 }
