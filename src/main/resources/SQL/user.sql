@@ -3,7 +3,7 @@ CREATE TABLE users(
     email VARCHAR(100) NOT NULL,
     password VARCHAR(255) NOT NULL,
     username VARCHAR(20) UNIQUE NOT NULL,
-    address VARCHAR(100) NOT NULL,
+    address VARCHAR(100),
     provider VARCHAR(20),
     provider_id VARCHAR(255),
     role VARCHAR(20) NOT NULL,
