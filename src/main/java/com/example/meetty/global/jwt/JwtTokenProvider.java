@@ -3,7 +3,6 @@ package com.example.meetty.global.jwt;
 import com.example.meetty.global.config.auth.CustomUserDetailsServiceImpl;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.DecodingException;
-import jakarta.websocket.DecodeException;
 import lombok.RequiredArgsConstructor;
 
 import lombok.extern.slf4j.Slf4j;
@@ -32,9 +31,10 @@ public class JwtTokenProvider {
     private Long refreshExpirationTime;
 
     // 토큰 생성
-    public String generateToken(String email, Long expireTime, String role) {
+    public String generateToken(String email, Long userId, Long expireTime, String role) {
         Claims claims = Jwts.claims().setSubject(email);
         claims.put("role", role);
+        claims.put("userId", userId);
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expireTime);
 
@@ -47,14 +47,14 @@ public class JwtTokenProvider {
     }
 
     // 액세스 토큰 만들기
-    public String createAccessToken(String email, String role) {
-        return generateToken(email, accessExpirationTime, role);
+    public String createAccessToken(String email, Long userId, String role) {
+        return generateToken(email, userId, accessExpirationTime, role);
     }
 
 
     // 리프레시 토큰 만들기
-    public String createRefreshToken(String email, String role) {
-        return generateToken(email, refreshExpirationTime, role);
+    public String createRefreshToken(String email, Long userId, String role) {
+        return generateToken(email, userId, refreshExpirationTime, role);
     }
 
 
