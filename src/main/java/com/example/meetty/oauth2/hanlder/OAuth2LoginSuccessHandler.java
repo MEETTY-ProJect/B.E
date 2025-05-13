@@ -42,18 +42,18 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
         String email = customUserDetails.getUsername();
 
-        String accessToken = jwtTokenProvider.createAccessToken(email, UserRole.ROLE_USER.getType());
-        String refreshToken = jwtTokenProvider.createRefreshToken(email, UserRole.ROLE_USER.getType());
-
         UserEntity userEntity = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("사용자 정보를 찾을 수 없습니다."));
+
+        String accessToken = jwtTokenProvider.createAccessToken(email, userEntity.getUserId(),UserRole.ROLE_USER.getType());
+        String refreshToken = jwtTokenProvider.createRefreshToken(email, userEntity.getUserId(), UserRole.ROLE_USER.getType());
 
         log.info("OAuth2 로그인 성공: {}", email);
         log.info("accessToken: {}", accessToken);
         log.info("refreshToken: {}", refreshToken);
 
         // 리프레시 토큰 저장
-        refreshTokenRedisService.saveRefreshToken(email, refreshToken, Duration.ofMillis(refreshExpirationTime));
+        refreshTokenRedisService.saveRefreshToken(userEntity.getUserId(), refreshToken, Duration.ofMillis(refreshExpirationTime));
 
         // 응답 헤더 및 쿠키 설정
         response.addHeader("Authorization", accessToken);

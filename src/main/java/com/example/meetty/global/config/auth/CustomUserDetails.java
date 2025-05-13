@@ -48,6 +48,9 @@ public class CustomUserDetails implements UserDetails, OAuth2User {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(userEntity.getRole().getType()));
     }
+    public Long getUserId() {
+        return userEntity.getUserId();
+    }
 
     @Override
     public String getUsername() {
