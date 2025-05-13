@@ -13,13 +13,18 @@ import com.example.meetty.global.jwt.JwtTokenProvider;
 import com.example.meetty.global.mail.service.EmailService;
 import com.example.meetty.global.util.PasswordUtil;
 import com.example.meetty.image.service.UserImageService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,7 +50,10 @@ public class UserService {
     private long refreshExpirationTime;
     @Value("${spring.jwt.secure-cookie}")
     private boolean secureCookie;
+    @PersistenceContext
+    private EntityManager entityManager;
 
+    @Transactional
     public void signUp(SignUpDto signUpDto, MultipartFile profileImage) throws Exception {
         if (userRepository.findByEmail(signUpDto.getEmail()).isPresent()) {
             throw new AppException(ErrorCode.USER_EMAIL_DUPLICATED, ErrorCode.USER_EMAIL_DUPLICATED.getMessage());
@@ -93,17 +101,22 @@ public class UserService {
                 () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND, ErrorCode.USER_EMAIL_NOT_FOUND.getMessage())
         );
 
+        if (!userEntity.isVerified() && userEntity.getProvider() == null) {
+            throw new AppException(ErrorCode.EMAIL_NOT_VERIFIED, ErrorCode.EMAIL_NOT_VERIFIED.getMessage());
+        }
+
         if(!Objects.equals(passwordUtil.encrypt(loginRequestDto.getPassword()), userEntity.getPassword())) {
             throw new AppException(ErrorCode.NOT_EQUAL_PASSWORD, ErrorCode.NOT_EQUAL_PASSWORD.getMessage());
         }
 
         String email = userEntity.getEmail();
         String role = userEntity.getRole().getType();
+        Long userId = userEntity.getUserId();
 
-        String accessToken = jwtTokenProvider.createAccessToken(email, role);
-        String refreshToken = jwtTokenProvider.createRefreshToken(email, role);
+        String accessToken = jwtTokenProvider.createAccessToken(email, userId,role);
+        String refreshToken = jwtTokenProvider.createRefreshToken(email, userId, role);
 
-        refreshTokenRedisService.saveRefreshToken(email, refreshToken, Duration.ofMillis(refreshExpirationTime));
+        refreshTokenRedisService.saveRefreshToken(userId, refreshToken, Duration.ofMillis(refreshExpirationTime));
 
         httpServletResponse.addHeader("Authorization", "Bearer " + accessToken);
         Cookie refreshCookie = new Cookie("refresh_token", refreshToken);
@@ -126,7 +139,6 @@ public class UserService {
                 .build();
     }
 
-    @Transactional
     public RefreshTokenResponseDto refreshToken(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         String refreshToken = getRefreshTokenFromCookie(httpServletRequest);
 
@@ -135,8 +147,12 @@ public class UserService {
         }
 
         String email = jwtTokenProvider.getEmailByToken(refreshToken);
+        UserEntity userEntity = userRepository.findByEmail(email).orElseThrow(
+                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND, ErrorCode.USER_EMAIL_NOT_FOUND.getMessage())
+        );
+        Long userId = userEntity.getUserId();
 
-        String savedRefreshToken = refreshTokenRedisService.getRefreshTokenByEmail(email).orElseThrow(
+        String savedRefreshToken = refreshTokenRedisService.getRefreshTokenByUserId(userId).orElseThrow(
                 () -> new AppException(ErrorCode.NOT_FOUND_REFRESH_TOKEN, ErrorCode.NOT_FOUND_REFRESH_TOKEN.getMessage())
         );
 
@@ -144,16 +160,13 @@ public class UserService {
             throw new AppException(ErrorCode.INCORRECT_REFRESH_TOKEN, ErrorCode.INCORRECT_REFRESH_TOKEN.getMessage());
         }
 
-        UserEntity userEntity = userRepository.findByEmail(email).orElseThrow(
-                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND, ErrorCode.USER_EMAIL_NOT_FOUND.getMessage())
-        );
-
-        String newAccessToken = jwtTokenProvider.createAccessToken(email, userEntity.getRole().getType());
-        String newRefreshToken = jwtTokenProvider.createRefreshToken(email, userEntity.getRole().getType());
+        String newAccessToken = jwtTokenProvider.createAccessToken(email, userId, userEntity.getRole().getType());
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(email, userId, userEntity.getRole().getType());
 
         setRefreshTokenCookie(httpServletResponse, newRefreshToken);
 
-        refreshTokenRedisService.saveRefreshToken(email, newRefreshToken, Duration.ofMillis(refreshExpirationTime));
+        // ✅ 이메일 → userId 기준으로 저장
+        refreshTokenRedisService.saveRefreshToken(userEntity.getUserId(), newRefreshToken, Duration.ofMillis(refreshExpirationTime));
 
         log.info("✅ 토큰 재발급 성공 - 이메일: {}", email);
         log.info("🔑 AccessToken: {}", newAccessToken);
@@ -191,8 +204,8 @@ public class UserService {
         httpServletResponse.addCookie(refreshCookie);
     }
 
-    public void logout(String email, HttpServletResponse response) {
-        refreshTokenRedisService.deleteToken(email);
+    public void logout(Long userId, HttpServletResponse response) {
+        refreshTokenRedisService.deleteToken(userId);
 
         Cookie cookie = new Cookie("refresh_token", null);
         cookie.setHttpOnly(true);
@@ -200,5 +213,30 @@ public class UserService {
         cookie.setPath("/");
         cookie.setMaxAge(0); // 즉시 만료
         response.addCookie(cookie);
+    }
+
+    // TODO: 회원탈퇴 시 관련된 거 전부 제거하기 cascade = CascadeType.REMOVE, orphanRemoval = true 설정
+    @Transactional
+    public void withdrawalUser(String loginEmail, String requestBodyPassword, HttpSession httpSession, HttpServletResponse httpServletResponse) {
+        UserEntity userEntity = userRepository.findByEmail(loginEmail).orElseThrow(
+                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND, ErrorCode.USER_EMAIL_NOT_FOUND.getMessage())
+        );
+
+        if (!Objects.equals(passwordUtil.encrypt(requestBodyPassword), userEntity.getPassword())) {
+            throw new AppException(ErrorCode.NOT_EQUAL_PASSWORD, ErrorCode.NOT_EQUAL_PASSWORD.getMessage());
+        }
+
+        logout(userEntity.getUserId(), httpServletResponse);
+
+        userRepository.delete(userEntity);
+
+        entityManager.flush();
+        entityManager.clear();
+        log.info("Hibernate 캐시 정리 완료");
+
+        httpSession.invalidate();
+        SecurityContextHolder.clearContext();
+
+        log.info("회원탈퇴 완료 - ID: {}", userEntity.getUserId());
     }
 }
