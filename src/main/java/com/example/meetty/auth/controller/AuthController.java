@@ -1,9 +1,6 @@
 package com.example.meetty.auth.controller;
 
-import com.example.meetty.auth.dto.LoginRequestDto;
-import com.example.meetty.auth.dto.LoginResponseDto;
-import com.example.meetty.auth.dto.RefreshTokenResponseDto;
-import com.example.meetty.auth.dto.SignUpDto;
+import com.example.meetty.auth.dto.*;
 import com.example.meetty.auth.entity.UserEntity;
 import com.example.meetty.auth.repository.UserRepository;
 import com.example.meetty.auth.service.UserService;
@@ -21,6 +18,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -81,18 +79,9 @@ public class AuthController {
 
         log.info("[POST] 로그인 요청");
 
-        UserEntity userEntity = userRepository.findByEmail(loginRequestDto.getEmail()).orElseThrow(
-                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND, ErrorCode.USER_EMAIL_NOT_FOUND.getMessage())
-        );
-
-        if (!userEntity.isVerified() && userEntity.getProvider() == null) {
-            throw new AppException(ErrorCode.EMAIL_NOT_VERIFIED, ErrorCode.EMAIL_NOT_VERIFIED.getMessage());
-        }
-
         try {
             LoginResponseDto loginResponseDto = userService.login(loginRequestDto, httpServletResponse);
             return ResponseEntity.ok(ApiResponse.success(loginResponseDto));
-
         } catch (AppException e) {
             return ResponseEntity.status(e.getErrorCode().getHttpStatus()).body(ApiResponse.fail(e.getErrorCode()));
         }
@@ -117,16 +106,39 @@ public class AuthController {
 
     @Operation(summary = "로그아웃", description = "로그아웃 API.")
     @SecurityRequirement(name = "bearerAuth")
-    @PostMapping("/logout")
+    @PostMapping("/v1/logout")
     public ResponseEntity<ApiResponse<String>> logout(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             HttpServletResponse response) {
 
-        String email = customUserDetails.getUsername();
-        userService.logout(email, response);
+        Long userId = customUserDetails.getUserId();
+        userService.logout(userId, response);
 
-        log.info("[POST] 로그아웃: {}", email);
+        log.info("[POST] 로그아웃: {}", userId);
 
         return ResponseEntity.ok(ApiResponse.success("로그아웃 되었습니다."));
+    }
+
+    @Operation(summary = "회원탈퇴", description = "회원탈퇴 API 입니다.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PutMapping("/v1/withdrawal")
+    public ResponseEntity<ApiResponse<String>> withdrawalUser(
+            @RequestBody PasswordRequestDto passwordRequestDto,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            HttpSession httpSession,
+            HttpServletResponse httpServletResponse) {
+
+        log.info("[PUT] 회원탈퇴 요청 - {}", customUserDetails.getUsername());
+
+        try {
+            String loginEmail = customUserDetails.getUsername();
+            String requestBodyPassword = passwordRequestDto.getPassword();
+            userService.withdrawalUser(loginEmail, requestBodyPassword, httpSession, httpServletResponse);
+
+            return ResponseEntity.ok(ApiResponse.success("회원탈퇴가 완료되었습니다."));
+        } catch (AppException e) {
+            return ResponseEntity.status(e.getErrorCode().getHttpStatus())
+                    .body(ApiResponse.fail(e.getErrorCode()));
+        }
     }
 }
