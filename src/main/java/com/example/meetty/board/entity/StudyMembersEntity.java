@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "study_group_members", uniqueConstraints = {@UniqueConstraint(columnNames = {"group_id", "user_id"})})
+@Table(name = "study_room_members", uniqueConstraints = {@UniqueConstraint(columnNames = {"room_id", "user_id"})})
 public class StudyMembersEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "member_id")
@@ -25,13 +25,6 @@ public class StudyMembersEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity member;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = false)
-    private StudyGroupEntity studyGroup ;
-
-    public enum MemberStatus {
-        PENDING,
-        ACTIVE
-    }
-    @Transient
-    private String invitationCode;
+    @JoinColumn(name = "room_id", nullable = false)
+    private StudyRoomEntity studyRoom ;
 }

@@ -1,6 +1,6 @@
-CREATE TABLE study_groups (
-    group_id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    group_name VARCHAR(100) NOT NULL,
+CREATE TABLE study_rooms (
+    room_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    room_name VARCHAR(100) NOT NULL,
     reason TEXT NOT NULL,
     capacity INT NOT NULL,
     purpose VARCHAR(100) NOT NULL,
@@ -11,9 +11,9 @@ CREATE TABLE study_groups (
     FOREIGN KEY (host_user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
-CREATE TABLE study_group_members (
+CREATE TABLE study_room_members (
      member_id BIGINT PRIMARY KEY AUTO_INCREMENT,
-     group_id BIGINT NOT NULL,
+     room_id BIGINT NOT NULL,
      user_id BIGINT NOT NULL,
      joined_at DATETIME NOT NULL,
      status VARCHAR(20) NOT NULL,
