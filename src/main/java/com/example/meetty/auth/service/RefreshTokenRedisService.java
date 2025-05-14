@@ -15,16 +15,16 @@ public class RefreshTokenRedisService {
     private final RedisTemplate<String, String> redisTemplate;
     private static final String PREFIX = "refresh_token:";
 
-    public void saveRefreshToken(String email, String token, Duration ttl) {
-        String key = PREFIX + email;
+    public void saveRefreshToken(Long userId, String token, Duration ttl) {
+        String key = PREFIX + userId;
         redisTemplate.opsForValue().set(key, token, ttl.toMillis(), TimeUnit.MILLISECONDS);
     }
 
-    public Optional<String> getRefreshTokenByEmail(String email) {
-        return Optional.ofNullable(redisTemplate.opsForValue().get(PREFIX + email));
+    public Optional<String> getRefreshTokenByUserId(Long userId) {
+        return Optional.ofNullable(redisTemplate.opsForValue().get(PREFIX + userId));
     }
 
-    public void deleteToken(String email) {
-        redisTemplate.delete(PREFIX + email);
+    public void deleteToken(Long userId) {
+        redisTemplate.delete(PREFIX + userId);
     }
 }
