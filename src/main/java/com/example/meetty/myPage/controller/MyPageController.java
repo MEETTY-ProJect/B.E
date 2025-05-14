@@ -86,7 +86,7 @@ public class MyPageController {
             return ResponseEntity.ok(ApiResponse.success(myPageResponseDto));
 
         } catch (JsonProcessingException e) {
-            throw new AppException(ErrorCode.INVALID_JSON_FORMAT, ErrorCode.INVALID_JSON_FORMAT.getMessage());
+            throw new AppException(ErrorCode.INVALID_JSON_FORMAT);
         }
     }
 

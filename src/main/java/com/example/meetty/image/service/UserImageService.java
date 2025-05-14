@@ -54,7 +54,7 @@ public class UserImageService {
 
         } catch (IOException e) {
             log.error("이미지 저장 중 오류 발생", e);
-            throw new AppException(ErrorCode.IMAGE_UPLOAD_FAILED, ErrorCode.IMAGE_UPLOAD_FAILED.getMessage());
+            throw new AppException(ErrorCode.IMAGE_UPLOAD_FAILED);
         }
     }
 

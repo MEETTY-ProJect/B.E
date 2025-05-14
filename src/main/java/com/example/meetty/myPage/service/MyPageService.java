@@ -26,7 +26,7 @@ public class MyPageService {
 
     public MyPageResponseDto getMyPage(Long userId) {
         UserEntity userEntity = userRepository.findByUserId(userId).orElseThrow(
-                () -> new AppException(ErrorCode.USER_NOT_FOUND, ErrorCode.USER_NOT_FOUND.getMessage())
+                () -> new AppException(ErrorCode.USER_NOT_FOUND)
         );
 
         String profileImageUrl = userEntity.getUserImageEntity().getUrl();
@@ -42,7 +42,7 @@ public class MyPageService {
     @Transactional
     public MyPageResponseDto updateUserInfo(Long userId, UpdateUserInfoRequestDto updateUserDto, MultipartFile profileImage) {
         UserEntity userEntity = userRepository.findByUserId(userId).orElseThrow(
-                        () -> new AppException(ErrorCode.USER_NOT_FOUND, ErrorCode.USER_NOT_FOUND.getMessage())
+                        () -> new AppException(ErrorCode.USER_NOT_FOUND)
         );
 
         log.info("수정 전 username: {}", userEntity.getUsername());
@@ -50,11 +50,10 @@ public class MyPageService {
         log.info("받은 dto.username: {}", updateUserDto.getUsername());
         log.info("받은 dto.address: {}", updateUserDto.getAddress());
 
-        // 닉네임 변경: 값이 있고, 기존과 다를 경우만 변경
         if (updateUserDto.getUsername() != null && !updateUserDto.getUsername().isBlank()) {
             if (!updateUserDto.getUsername().equals(userEntity.getUsername())
                     && userRepository.findByUsername(updateUserDto.getUsername()).isPresent()) {
-                throw new AppException(ErrorCode.USERNAME_DUPLICATED, "이미 사용 중인 닉네임입니다.");
+                throw new AppException(ErrorCode.USERNAME_DUPLICATED);
             }
             userEntity.setUsername(updateUserDto.getUsername());
         }
@@ -93,30 +92,30 @@ public class MyPageService {
     @Transactional(readOnly = true)
     public void verifyPassword(Long userId, String currentPassword) {
         UserEntity userEntity = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, ErrorCode.USER_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         String encryptedInput = passwordUtil.encrypt(currentPassword);
 
         if (!encryptedInput.equals(userEntity.getPassword())) {
-            throw new AppException(ErrorCode.INVALID_PASSWORD, ErrorCode.INVALID_PASSWORD.getMessage());
+            throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
     }
 
     @Transactional
     public void updatePassword(Long userId, UpdatePasswordRequestDto dto) {
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(
-                () -> new AppException(ErrorCode.USER_NOT_FOUND, "사용자를 찾을 수 없습니다.")
+                () -> new AppException(ErrorCode.USER_NOT_FOUND)
         );
 
         // 현재 비밀번호 검증
         String encryptedCurrent = passwordUtil.encrypt(dto.getCurrentPassword());
         if (!encryptedCurrent.equals(userEntity.getPassword())) {
-            throw new AppException(ErrorCode.INVALID_PASSWORD, ErrorCode.INVALID_PASSWORD.getMessage());
+            throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
 
         // 새 비밀번호 일치 확인
         if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
-            throw new AppException(ErrorCode.NOT_EQUAL_PASSWORD, ErrorCode.NOT_EQUAL_PASSWORD.getMessage());
+            throw new AppException(ErrorCode.NOT_EQUAL_PASSWORD);
         }
 
         // 새 비밀번호 암호화 후 저장
