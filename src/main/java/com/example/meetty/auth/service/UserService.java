@@ -12,6 +12,7 @@ import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.global.jwt.JwtTokenProvider;
 import com.example.meetty.global.mail.service.EmailService;
 import com.example.meetty.global.util.PasswordUtil;
+import com.example.meetty.image.repository.UserImageRepository;
 import com.example.meetty.image.service.UserImageService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -42,6 +43,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordUtil passwordUtil;
     private final UserImageService userImageService;
+    private final UserImageRepository userImageRepository;
     private final RedisTemplate<String, String> redisTemplate;
     private final EmailService emailService;
     private final JwtTokenProvider jwtTokenProvider;
@@ -54,7 +56,7 @@ public class UserService {
     private EntityManager entityManager;
 
     @Transactional
-    public void signUp(SignUpDto signUpDto, MultipartFile profileImage) throws Exception {
+    public void signUp(SignUpDto signUpDto, MultipartFile profileImage) {
         if (userRepository.findByEmail(signUpDto.getEmail()).isPresent()) {
             throw new AppException(ErrorCode.USER_EMAIL_DUPLICATED, ErrorCode.USER_EMAIL_DUPLICATED.getMessage());
         }
@@ -73,14 +75,10 @@ public class UserService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        boolean isDefaultImage = false;
-        if (profileImage == null || profileImage.isEmpty()) {
-            profileImage = userImageService.getDefaultProfileImage();
-            isDefaultImage = true;
-        }
-
         UserEntity savedUser = userRepository.save(userEntity);
-        userImageService.uploadUserImage(savedUser, profileImage, isDefaultImage);
+
+        // 이미지 업로드 (내부에서 null, 비어 있음 처리 + 기본 이미지 경로 저장)
+        userImageService.uploadUserImage(savedUser, profileImage, false);
 
         // 이메일로 인증링크 발송
         String token = UUID.randomUUID().toString();
@@ -106,7 +104,7 @@ public class UserService {
         }
 
         if(!Objects.equals(passwordUtil.encrypt(loginRequestDto.getPassword()), userEntity.getPassword())) {
-            throw new AppException(ErrorCode.NOT_EQUAL_PASSWORD, ErrorCode.NOT_EQUAL_PASSWORD.getMessage());
+            throw new AppException(ErrorCode.INVALID_PASSWORD, ErrorCode.INVALID_PASSWORD.getMessage());
         }
 
         String email = userEntity.getEmail();
@@ -223,11 +221,11 @@ public class UserService {
         );
 
         if (!Objects.equals(passwordUtil.encrypt(requestBodyPassword), userEntity.getPassword())) {
-            throw new AppException(ErrorCode.NOT_EQUAL_PASSWORD, ErrorCode.NOT_EQUAL_PASSWORD.getMessage());
+            throw new AppException(ErrorCode.INVALID_PASSWORD, ErrorCode.INVALID_PASSWORD.getMessage());
         }
 
         logout(userEntity.getUserId(), httpServletResponse);
-
+        userImageRepository.deleteByUserEntity(userEntity);
         userRepository.delete(userEntity);
 
         entityManager.flush();
