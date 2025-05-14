@@ -71,7 +71,7 @@ public class AuthController {
             userService.signUp(signUpDto, profileImage);
             return ResponseEntity.ok(ApiResponse.success("회원가입 완료"));
         } catch (JsonProcessingException e) {
-            throw new AppException(ErrorCode.INVALID_JSON_FORMAT, ErrorCode.INVALID_JSON_FORMAT.getMessage());
+            throw new AppException(ErrorCode.INVALID_JSON_FORMAT);
         }
     }
 
