@@ -23,7 +23,7 @@ public class JoinRequestEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id", nullable = false)
-    private StudyGroupEntity studyGroup;
+    private StudyRoomEntity studyGroup;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
