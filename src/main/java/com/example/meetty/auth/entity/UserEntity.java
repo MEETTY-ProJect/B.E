@@ -49,7 +49,7 @@ public class UserEntity {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @OneToOne(mappedBy = "userEntity", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "userEntity", fetch = FetchType.LAZY)
     private UserImageEntity userImageEntity;
 
     @OneToMany(mappedBy = "sender")
