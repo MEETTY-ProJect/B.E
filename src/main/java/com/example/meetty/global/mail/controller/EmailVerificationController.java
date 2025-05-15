@@ -41,7 +41,7 @@ public class EmailVerificationController {
         }
 
         UserEntity userEntity = userRepository.findByEmail(email).orElseThrow(
-                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND, ErrorCode.USER_EMAIL_NOT_FOUND.getMessage())
+                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND)
         );
 
         if (userEntity.isVerified()) {
