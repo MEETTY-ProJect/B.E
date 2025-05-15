@@ -39,7 +39,7 @@ public class ChatMessageService {
         }
 
 
-        //메시지 저장
+        //메시지 저장1
         UserEntity user = UserEntity.builder().userId(userId).build();
         StudyRoomEntity room = StudyRoomEntity.builder().roomId(roomId).build();
 
