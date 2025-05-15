@@ -3,6 +3,7 @@ package com.example.meetty.global.exception;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 
 @Getter
 @AllArgsConstructor
@@ -32,7 +33,10 @@ public enum ErrorCode {
 
     // StudyRoom 에러코드
     STUDY_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 스터디 그룹을 찾을 수 없습니다."),
-    UNAUTHORIZED_STUDY_GROUP_ACCESS(HttpStatus.FORBIDDEN, "스터디 그룹에 대한 권한이 없습니다.")
+    UNAUTHORIZED_STUDY_GROUP_ACCESS(HttpStatus.FORBIDDEN, "스터디 그룹에 대한 권한이 없습니다."),
+
+    //chat 에러코드
+    UNAUTHORIZED_STUDY_ROOM_CHAT(HttpStatus.FORBIDDEN, "해당 스터디방에 참여하지 않은 유저입니다.")
 
     ;
 

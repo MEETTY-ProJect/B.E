@@ -14,4 +14,7 @@ public interface StudyMembersRepository extends JpaRepository<StudyMembersEntity
 
     // 특정 스터디 그룹에 특정 사용자가 'ACTIVE' 상태로 존재하는지 확인하는 메서드
     boolean existsByStudyRoomRoomIdAndMemberUserIdAndStatus(Long studyGroupId, Long userId, MemberStatus status);
+
+    //특정 스터디 그룹에 속해있는 사용자가 맞는지 확인하는 메서드
+    boolean existsByStudyRoom_RoomIdAndMember_UserId(Long roomId, Long userId);
 }

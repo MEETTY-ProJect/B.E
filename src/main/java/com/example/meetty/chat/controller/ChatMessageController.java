@@ -8,7 +8,6 @@ import com.example.meetty.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,8 +35,7 @@ public class ChatMessageController {
     public ApiResponse<Void> saveMessage(@PathVariable Long roomId,
                                             @RequestBody ChatMessageRequestDto request,
                                             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        Long userId = userDetails.getUserId();
-        chatMessageService.saveMessage(roomId,userId, request.getMessage());
+        chatMessageService.saveMessage(roomId,userDetails.getUserId(), request.getMessage());
         return ApiResponse.success(null);
     }
 }

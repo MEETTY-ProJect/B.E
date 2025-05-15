@@ -34,10 +34,6 @@ public class CustomUserDetails implements UserDetails, OAuth2User {
         this.attributes = attributes;
     }
 
-    public Long getUserId() {
-        return userEntity.getUserId();
-    }
-
     @Override
     public Map<String, Object> getAttributes() {
         return this.attributes;
