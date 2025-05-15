@@ -1,6 +1,7 @@
 package com.example.meetty.chat.entity;
 
 import com.example.meetty.auth.entity.UserEntity;
+import com.example.meetty.board.entity.StudyRoomEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,8 +23,8 @@ public class ChatMessage {
     private Long messageId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "room_id")
-    private ChatRooms room;
+    @JoinColumn(name = "room_id", nullable = false)
+    private StudyRoomEntity room;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
