@@ -13,17 +13,22 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "study_room_members", uniqueConstraints = {@UniqueConstraint(columnNames = {"room_id", "user_id"})})
 public class StudyMembersEntity {
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "member_id")
     private Long memberId;
+
     @Column(name = "joined_at",nullable = false)
     private LocalDateTime joinedAt;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private MemberStatus status = MemberStatus.PENDING;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity member;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)
     private StudyRoomEntity studyRoom ;
