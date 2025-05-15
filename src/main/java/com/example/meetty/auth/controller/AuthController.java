@@ -9,6 +9,7 @@ import com.example.meetty.global.dto.ApiResponse;
 import com.example.meetty.global.exception.AppException;
 import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.global.validation.ValidationService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -19,6 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -55,36 +57,35 @@ public class AuthController {
             @Parameter(
                     description = "회원 프로필 이미지 파일",
                     content = @Content(
-                            mediaType = "profileImage/png",
+                            mediaType = "image/*",
                             schema = @Schema(type = "String", format = "binary")
                     )
             )
-            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) throws Exception {
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
 
         log.info("[POST] 회원가입 요청");
 
-        SignUpDto signUpDto = objectMapper.readValue(dtoJson, SignUpDto.class);
-        validationService.validate(signUpDto);
-
-        userService.signUp(signUpDto, profileImage);
-
-        return ResponseEntity.ok(ApiResponse.success("회원가입이 완료되었습니다. 이메일 인증을 완료해주세요."));
+        try {
+            SignUpDto signUpDto = objectMapper.readValue(dtoJson, SignUpDto.class);
+            validationService.validate(signUpDto);
+            userService.signUp(signUpDto, profileImage);
+            return ResponseEntity.ok(ApiResponse.success("회원가입 완료"));
+        } catch (JsonProcessingException e) {
+            throw new AppException(ErrorCode.INVALID_JSON_FORMAT);
+        }
     }
 
     @Operation(summary = "로그인", description = "이메일과 패스워드로 로그인하는 API")
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponseDto>> login(
-            @RequestBody LoginRequestDto loginRequestDto,
+            @Valid @RequestBody LoginRequestDto loginRequestDto,
             HttpServletResponse httpServletResponse) {
 
         log.info("[POST] 로그인 요청");
 
-        try {
-            LoginResponseDto loginResponseDto = userService.login(loginRequestDto, httpServletResponse);
-            return ResponseEntity.ok(ApiResponse.success(loginResponseDto));
-        } catch (AppException e) {
-            return ResponseEntity.status(e.getErrorCode().getHttpStatus()).body(ApiResponse.fail(e.getErrorCode()));
-        }
+        LoginResponseDto loginResponseDto = userService.login(loginRequestDto, httpServletResponse);
+
+        return ResponseEntity.ok(ApiResponse.success(loginResponseDto));
     }
 
     @Operation(summary = "토큰 재발급", description = "쿠키에 저장된 refresh_token을 활용하여 토큰을 재발급하는 API")
@@ -94,14 +95,9 @@ public class AuthController {
 
         log.info("[POST] 토큰 재발급 요청");
 
-        try {
-            RefreshTokenResponseDto refreshTokenResponseDto = userService.refreshToken(httpServletRequest, httpServletResponse);
-            return ResponseEntity.ok(ApiResponse.success(refreshTokenResponseDto));
-        } catch (AppException e) {
-            log.warn("❗토큰 재발급 실패: {}", e.getMessage(), e);
-            return ResponseEntity.status(e.getErrorCode().getHttpStatus())
-                    .body(ApiResponse.fail(e.getErrorCode()));
-        }
+        RefreshTokenResponseDto refreshTokenResponseDto = userService.refreshToken(httpServletRequest, httpServletResponse);
+
+        return ResponseEntity.ok(ApiResponse.success(refreshTokenResponseDto));
     }
 
     @Operation(summary = "로그아웃", description = "로그아웃 API.")
@@ -130,15 +126,10 @@ public class AuthController {
 
         log.info("[PUT] 회원탈퇴 요청 - {}", customUserDetails.getUsername());
 
-        try {
-            String loginEmail = customUserDetails.getUsername();
-            String requestBodyPassword = passwordRequestDto.getPassword();
-            userService.withdrawalUser(loginEmail, requestBodyPassword, httpSession, httpServletResponse);
+        String loginEmail = customUserDetails.getUsername();
+        String requestBodyPassword = passwordRequestDto.getPassword();
+        userService.withdrawalUser(loginEmail, requestBodyPassword, httpSession, httpServletResponse);
 
-            return ResponseEntity.ok(ApiResponse.success("회원탈퇴가 완료되었습니다."));
-        } catch (AppException e) {
-            return ResponseEntity.status(e.getErrorCode().getHttpStatus())
-                    .body(ApiResponse.fail(e.getErrorCode()));
-        }
+        return ResponseEntity.ok(ApiResponse.success("회원탈퇴가 완료되었습니다."));
     }
 }

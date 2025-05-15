@@ -12,6 +12,7 @@ import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.global.jwt.JwtTokenProvider;
 import com.example.meetty.global.mail.service.EmailService;
 import com.example.meetty.global.util.PasswordUtil;
+import com.example.meetty.image.repository.UserImageRepository;
 import com.example.meetty.image.service.UserImageService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -42,6 +43,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordUtil passwordUtil;
     private final UserImageService userImageService;
+    private final UserImageRepository userImageRepository;
     private final RedisTemplate<String, String> redisTemplate;
     private final EmailService emailService;
     private final JwtTokenProvider jwtTokenProvider;
@@ -54,13 +56,13 @@ public class UserService {
     private EntityManager entityManager;
 
     @Transactional
-    public void signUp(SignUpDto signUpDto, MultipartFile profileImage) throws Exception {
+    public void signUp(SignUpDto signUpDto, MultipartFile profileImage) {
         if (userRepository.findByEmail(signUpDto.getEmail()).isPresent()) {
-            throw new AppException(ErrorCode.USER_EMAIL_DUPLICATED, ErrorCode.USER_EMAIL_DUPLICATED.getMessage());
+            throw new AppException(ErrorCode.USER_EMAIL_DUPLICATED);
         }
 
         if (userRepository.findByUsername(signUpDto.getUsername()).isPresent()) {
-            throw new AppException(ErrorCode.USERNAME_DUPLICATED, ErrorCode.USERNAME_DUPLICATED.getMessage());
+            throw new AppException(ErrorCode.USERNAME_DUPLICATED);
         }
 
         UserEntity userEntity = UserEntity.builder()
@@ -73,14 +75,10 @@ public class UserService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        boolean isDefaultImage = false;
-        if (profileImage == null || profileImage.isEmpty()) {
-            profileImage = userImageService.getDefaultProfileImage();
-            isDefaultImage = true;
-        }
-
         UserEntity savedUser = userRepository.save(userEntity);
-        userImageService.uploadUserImage(savedUser, profileImage, isDefaultImage);
+
+        // 이미지 업로드 (내부에서 null, 비어 있음 처리 + 기본 이미지 경로 저장)
+        userImageService.uploadUserImage(savedUser, profileImage, false);
 
         // 이메일로 인증링크 발송
         String token = UUID.randomUUID().toString();
@@ -90,7 +88,7 @@ public class UserService {
             emailService.sendVerificationLink(savedUser.getEmail(), token);
         } catch (Exception e) {
             log.error("❌ 이메일 전송 실패 - 회원가입 롤백: {}", savedUser.getEmail());
-            throw new AppException(ErrorCode.EMAIL_SEND_FAIL, ErrorCode.EMAIL_SEND_FAIL.getMessage());
+            throw new AppException(ErrorCode.EMAIL_SEND_FAIL);
         }
 
         log.info("✅ 회원가입 완료 - 이메일: {}, 인증 링크 발송됨", savedUser.getEmail());
@@ -98,15 +96,15 @@ public class UserService {
 
     public LoginResponseDto login(LoginRequestDto loginRequestDto, HttpServletResponse httpServletResponse) {
         UserEntity userEntity = userRepository.findByEmail(loginRequestDto.getEmail()).orElseThrow(
-                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND, ErrorCode.USER_EMAIL_NOT_FOUND.getMessage())
+                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND)
         );
 
         if (!userEntity.isVerified() && userEntity.getProvider() == null) {
-            throw new AppException(ErrorCode.EMAIL_NOT_VERIFIED, ErrorCode.EMAIL_NOT_VERIFIED.getMessage());
+            throw new AppException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
 
         if(!Objects.equals(passwordUtil.encrypt(loginRequestDto.getPassword()), userEntity.getPassword())) {
-            throw new AppException(ErrorCode.NOT_EQUAL_PASSWORD, ErrorCode.NOT_EQUAL_PASSWORD.getMessage());
+            throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
 
         String email = userEntity.getEmail();
@@ -143,21 +141,21 @@ public class UserService {
         String refreshToken = getRefreshTokenFromCookie(httpServletRequest);
 
         if (refreshToken == null || !jwtTokenProvider.validateToken(refreshToken)) {
-            throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.INVALID_REFRESH_TOKEN.getMessage());
+            throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
         String email = jwtTokenProvider.getEmailByToken(refreshToken);
         UserEntity userEntity = userRepository.findByEmail(email).orElseThrow(
-                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND, ErrorCode.USER_EMAIL_NOT_FOUND.getMessage())
+                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND)
         );
         Long userId = userEntity.getUserId();
 
         String savedRefreshToken = refreshTokenRedisService.getRefreshTokenByUserId(userId).orElseThrow(
-                () -> new AppException(ErrorCode.NOT_FOUND_REFRESH_TOKEN, ErrorCode.NOT_FOUND_REFRESH_TOKEN.getMessage())
+                () -> new AppException(ErrorCode.NOT_FOUND_REFRESH_TOKEN)
         );
 
         if (!refreshToken.equals(savedRefreshToken)) {
-            throw new AppException(ErrorCode.INCORRECT_REFRESH_TOKEN, ErrorCode.INCORRECT_REFRESH_TOKEN.getMessage());
+            throw new AppException(ErrorCode.INCORRECT_REFRESH_TOKEN);
         }
 
         String newAccessToken = jwtTokenProvider.createAccessToken(email, userId, userEntity.getRole().getType());
@@ -179,7 +177,7 @@ public class UserService {
         Cookie[] cookies = httpServletRequest.getCookies();
 
         if (cookies == null || cookies.length == 0) {
-            throw new AppException(ErrorCode.NOT_FOUND_COOKIE, ErrorCode.NOT_FOUND_COOKIE.getMessage());
+            throw new AppException(ErrorCode.NOT_FOUND_COOKIE);
         }
 
         return Arrays.stream(cookies)
@@ -188,7 +186,7 @@ public class UserService {
                 .filter(value -> value != null && !value.isBlank())
                 .findFirst()
                 .orElseThrow(
-                        () -> new AppException(ErrorCode.NOT_FOUND_REFRESH_TOKEN, ErrorCode.NOT_FOUND_REFRESH_TOKEN.getMessage())
+                        () -> new AppException(ErrorCode.NOT_FOUND_REFRESH_TOKEN)
                 );
     }
 
@@ -219,15 +217,15 @@ public class UserService {
     @Transactional
     public void withdrawalUser(String loginEmail, String requestBodyPassword, HttpSession httpSession, HttpServletResponse httpServletResponse) {
         UserEntity userEntity = userRepository.findByEmail(loginEmail).orElseThrow(
-                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND, ErrorCode.USER_EMAIL_NOT_FOUND.getMessage())
+                () -> new AppException(ErrorCode.USER_EMAIL_NOT_FOUND)
         );
 
         if (!Objects.equals(passwordUtil.encrypt(requestBodyPassword), userEntity.getPassword())) {
-            throw new AppException(ErrorCode.NOT_EQUAL_PASSWORD, ErrorCode.NOT_EQUAL_PASSWORD.getMessage());
+            throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
 
         logout(userEntity.getUserId(), httpServletResponse);
-
+        userImageRepository.deleteByUserEntity(userEntity);
         userRepository.delete(userEntity);
 
         entityManager.flush();

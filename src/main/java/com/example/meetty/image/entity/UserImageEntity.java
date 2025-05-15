@@ -19,7 +19,7 @@ public class UserImageEntity {
     @Column(name = "url", nullable = false)
     private String url;
 
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private UserEntity userEntity;
 

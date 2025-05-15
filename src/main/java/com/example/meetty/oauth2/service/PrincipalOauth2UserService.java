@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -47,19 +48,29 @@ public class PrincipalOauth2UserService extends DefaultOAuth2UserService {
         if (email == null || email.isBlank()) {
             email = provider + "_" + oAuth2UserInfo.getProviderId() + "@socialuser.com";
         }
+
         Optional<UserEntity> existingUser = userRepository.findByEmail(email);
         UserEntity oauthUser;
 
         if (existingUser.isPresent()) {
             oauthUser = existingUser.get();
         } else {
+            // 유저네임 중복 시 자동생성
+            String baseUsername = oAuth2UserInfo.getName();
+            String finalUsername = baseUsername;
+
+            if (userRepository.findByUsername(finalUsername).isPresent()) {
+                finalUsername = baseUsername + "_" + UUID.randomUUID().toString().substring(0, 8);
+            }
+
             oauthUser = UserEntity.builder()
                     .email(email)
                     .password("OAuth2")
-                    .username(oAuth2UserInfo.getName())
+                    .username(finalUsername)
                     .provider(provider)
                     .providerId(oAuth2UserInfo.getProviderId())
                     .role(UserRole.ROLE_USER)
+                    .isVerified(true)
                     .createdAt(LocalDateTime.now())
                     .build();
 
@@ -70,11 +81,9 @@ public class PrincipalOauth2UserService extends DefaultOAuth2UserService {
 
             try {
                 String imageUrl = oAuth2UserInfo.getImage();
-                boolean isDefaultImage = (imageUrl == null || imageUrl.isBlank());
 
-                if (isDefaultImage) {
-                    MultipartFile image = userImageService.getDefaultProfileImage();
-                    userImageService.uploadUserImage(managedUser, image, true);
+                if (imageUrl == null || imageUrl.isBlank()) {
+                    userImageService.uploadUserImage(managedUser, null, true);
                 } else {
                     userImageService.uploadUserImageFromUrl(managedUser, imageUrl);
                 }

@@ -45,7 +45,7 @@ public class EmailService {
             log.info("✅ 이메일 인증 링크 전송 완료: {}", email);
         } catch (Exception e) {
             log.error("❌ 이메일 전송 실패: {}", e.getMessage(), e);
-            throw new AppException(ErrorCode.EMAIL_SEND_FAIL, ErrorCode.EMAIL_SEND_FAIL.getMessage());
+            throw new AppException(ErrorCode.EMAIL_SEND_FAIL);
         }
     }
 }
