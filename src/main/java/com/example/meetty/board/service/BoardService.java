@@ -1,6 +1,7 @@
 package com.example.meetty.board.service;
 
 import com.example.meetty.auth.entity.UserEntity;
+import com.example.meetty.auth.repository.UserRepository;
 import com.example.meetty.board.dto.*;
 import com.example.meetty.board.entity.MemberStatus;
 import com.example.meetty.board.entity.StudyMembersEntity;
@@ -25,9 +26,13 @@ import java.time.LocalDateTime;
 public class BoardService {
     private final StudyRoomRepository studyRoomRepository;
     private final StudyMembersRepository studyMembersRepository;
+    private final UserRepository userRepository;
 
     @Transactional
-    public StudyRoomResponse createStudyGroup(CreateRoomRequest request,UserEntity currentUser) {
+    public StudyRoomResponse createStudyGroup(CreateRoomRequest request,Long userId) {
+
+        UserEntity currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND,ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
 
         StudyRoomEntity studyGroup = StudyRoomEntity.builder()
                 .roomName(request.getRoomName())
@@ -102,11 +107,11 @@ public class BoardService {
 
 
     @Transactional
-    public StudyRoomResponse updateStudyGroup(Long id, UpdateStudyRoomRequest request,UserEntity currentUser) {
+    public StudyRoomResponse updateStudyGroup(Long id, UpdateStudyRoomRequest request,Long userId) {
         StudyRoomEntity studyGroup = studyRoomRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND,ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
 
-        if (!studyGroup.getHost().getUserId().equals(currentUser.getUserId())) {
+        if (!studyGroup.getHost().getUserId().equals(userId)) {
             throw new AppException(ErrorCode.UNAUTHORIZED_STUDY_GROUP_ACCESS,ErrorCode.UNAUTHORIZED_ACCESS.getMessage());
         }
 
@@ -118,12 +123,12 @@ public class BoardService {
     }
 
     @Transactional
-    public void deleteStudyGroup(Long id,UserEntity currentUser) {
+    public void deleteStudyGroup(Long id,Long userId) {
         StudyRoomEntity studyGroup = studyRoomRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND,ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
 
         // 호스트만 삭제 가능
-        if (!studyGroup.getHost().getUserId().equals(currentUser.getUserId())) {
+        if (!studyGroup.getHost().getUserId().equals(userId)) {
             throw new AppException(ErrorCode.UNAUTHORIZED_STUDY_GROUP_ACCESS,ErrorCode.UNAUTHORIZED_STUDY_GROUP_ACCESS.getMessage());
         }
 
