@@ -77,6 +77,8 @@ dependencies {
 
     // redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'io.lettuce:lettuce-core'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
 
     // e-mail
     implementation 'org.springframework.boot:spring-boot-starter-mail'
