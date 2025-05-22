@@ -45,4 +45,8 @@ public class NotificationEntity {
         this.createdAt = LocalDateTime.now();
         this.isRead = false;
     }
+
+    public void markAsRead() {
+        this.isRead = true;
+    }
 }
