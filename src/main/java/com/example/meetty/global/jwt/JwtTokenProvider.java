@@ -105,7 +105,7 @@ public class JwtTokenProvider {
         return false;
     }
 
-    // 토큰으로부터 이메일 불러오기
+    // 토큰에서 이메일 가져오기
     public String getEmailByToken(String token) {
         try {
             return Jwts.parserBuilder()
@@ -116,6 +116,23 @@ public class JwtTokenProvider {
                     .getSubject();
         } catch (JwtException e) {
             log.warn("getEmailByToken 실패: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    // 토큰에서 userId 가져오기
+    public Long getUserIdFromToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(jwtSecret)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            return claims.get("userId", Long.class);
+
+        } catch (JwtException e) {
+            log.warn("getUserIdFromToken 실패: {}", e.getMessage());
             return null;
         }
     }

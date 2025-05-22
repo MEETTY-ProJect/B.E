@@ -2,6 +2,7 @@ package com.example.meetty.auth.entity;
 
 import com.example.meetty.chat.entity.ChatMessage;
 import com.example.meetty.image.entity.UserImageEntity;
+import com.example.meetty.notification.entity.NotificationEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -55,5 +56,6 @@ public class UserEntity {
     @OneToMany(mappedBy = "sender")
     private List<ChatMessage> chatMessages = new ArrayList<>();
 
-
+    @OneToMany(mappedBy = "receiver", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<NotificationEntity> notifications = new ArrayList<>();
 }

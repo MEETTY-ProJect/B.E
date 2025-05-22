@@ -76,9 +76,13 @@ public class UserService {
                 .build();
 
         UserEntity savedUser = userRepository.save(userEntity);
+        String uploadedImageUrl;
 
-        // 이미지 업로드 (내부에서 null, 비어 있음 처리 + 기본 이미지 경로 저장)
-        userImageService.uploadUserImage(savedUser, profileImage, false);
+        if (profileImage == null || profileImage.isEmpty()) {
+            uploadedImageUrl = userImageService.uploadUserImage(savedUser, null, true); // 기본 이미지
+        } else {
+            uploadedImageUrl = userImageService.uploadUserImage(savedUser, profileImage, false);
+        }
 
         // 이메일로 인증링크 발송
         String token = UUID.randomUUID().toString();

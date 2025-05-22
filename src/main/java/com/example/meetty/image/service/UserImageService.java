@@ -40,7 +40,13 @@ public class UserImageService {
         try {
             if (!isDefaultImage && (image == null || image.isEmpty())) {
                 log.info("이미지 변경 없음 → 기존 이미지 유지");
-                return userEntity.getUserImageEntity().getUrl();
+
+                if (userEntity.getUserImageEntity() != null) {
+                    return userEntity.getUserImageEntity().getUrl();
+                } else {
+                    log.warn("기존 이미지 없음 → 기본 이미지 반환");
+                    return DEFAULT_IMAGE_PATH;
+                }
             }
 
             userImageRepository.deleteByUserEntity(userEntity);

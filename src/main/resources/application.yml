@@ -23,12 +23,6 @@ spring:
             mail.smtp.starttls.enable: true
             mail.debug: true
 
-    datasource:
-        url: jdbc:mariadb://34.64.218.29:3306/meetty_db
-        username: ${PROD_USERNAME}
-        password: ${PROD_PASSWORD}
-        driver-class-name: org.mariadb.jdbc.Driver
-
     config:
         import:
             - application-oauth2.yml
