@@ -26,5 +26,7 @@ public class UserImageEntity {
     public UserImageEntity(UserEntity userEntity, String url) {
         this.userEntity = userEntity;
         this.url = url;
+
+        userEntity.setUserImageEntity(this);
     }
 }
