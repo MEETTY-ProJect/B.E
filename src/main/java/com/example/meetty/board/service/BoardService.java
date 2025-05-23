@@ -11,10 +11,13 @@ import com.example.meetty.board.repository.StudyRoomRepository;
 import com.example.meetty.board.repository.StudyMembersRepository;
 import com.example.meetty.global.exception.AppException;
 import com.example.meetty.global.exception.ErrorCode;
+import com.example.meetty.global.mail.service.EmailService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -22,14 +25,20 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.RandomStringUtils;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class BoardService {
     private final StudyRoomRepository studyRoomRepository;
     private final StudyMembersRepository studyMembersRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Transactional
     public StudyRoomResponse createStudyGroup(CreateRoomRequest request,Long userId) {
@@ -164,4 +173,147 @@ public class BoardService {
 
         studyRoomRepository.delete(studyGroup);
     }
+
+    @Transactional
+    public void requestJoinStudyGroup(Long roomId, Long userId) {
+        StudyRoomEntity studyRoom = studyRoomRepository.findByIdWithHost(roomId)
+                .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND, ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
+
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, ErrorCode.USER_NOT_FOUND.getMessage()));
+
+        Optional<StudyMembersEntity> existingMember = studyMembersRepository.findByStudyRoomRoomIdAndMemberUserId(roomId, userId);
+        if (existingMember.isPresent()) {
+            throw new AppException(ErrorCode.ALREADY_STUDY_GROUP_MEMBER, ErrorCode.ALREADY_STUDY_GROUP_MEMBER.getMessage());
+        }
+
+        // 최대 인원 확인
+        int currentActiveMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(roomId, MemberStatus.ACTIVE);
+        if (currentActiveMemberCount >= studyRoom.getCapacity()) {
+            throw new AppException(ErrorCode.STUDY_GROUP_CAPACITY_FULL, ErrorCode.STUDY_GROUP_CAPACITY_FULL.getMessage());
+        }
+
+        StudyMembersEntity pendingMember = StudyMembersEntity.builder()
+                .studyRoom(studyRoom)
+                .member(user)
+                .joinedAt(LocalDateTime.now())
+                .status(MemberStatus.PENDING)
+                .build();
+
+        studyMembersRepository.save(pendingMember);
+
+    }
+
+    @Transactional // DB 조회 등을 포함하므로 트랜잭션 유지. 이메일/Redis 실패 시 롤백 여부는 정책에 따라 달라질 수 있음.
+    public void inviteStudyGroupMember(Long roomId, String targetUserNickname, Long hostUserId) {
+        StudyRoomEntity studyRoom = studyRoomRepository.findByIdWithHost(roomId)
+                .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND, ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
+
+        if (!studyRoom.getHost().getUserId().equals(hostUserId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED_STUDY_GROUP_ACCESS, ErrorCode.UNAUTHORIZED_STUDY_GROUP_ACCESS.getMessage());
+        }
+
+        UserEntity targetUser = userRepository.findByUsername(targetUserNickname)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, targetUserNickname + " 닉네임을 가진 회원을 찾을 수 없습니다."));
+
+        Optional<StudyMembersEntity> existingMember = studyMembersRepository.findByStudyRoomRoomIdAndMemberUserId(roomId, targetUser.getUserId());
+        if (existingMember.isPresent()) {
+            throw new AppException(ErrorCode.ALREADY_STUDY_GROUP_MEMBER, targetUserNickname + " 회원은 이미 스터티 그룹 멤버입니다.");
+        }
+
+        int currentActiveMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(roomId, MemberStatus.ACTIVE);
+        if (currentActiveMemberCount >= studyRoom.getCapacity()) {
+            throw new AppException(ErrorCode.STUDY_GROUP_CAPACITY_FULL, "스터디 그룹 인원이 가득 찼습니다. 더 이상 초대할 수 없습니다.");
+        }
+
+        String invitationToken = generateInvitationToken();
+        String tokenKey = "study_invite:" + invitationToken;
+        String tokenValue = roomId + ":" + targetUser.getUserId();
+        long expirationTime = 24;
+        TimeUnit expirationUnit = TimeUnit.HOURS;
+
+        try {
+            redisTemplate.opsForValue().set(tokenKey, tokenValue, expirationTime, expirationUnit);
+            log.info("Redis에 스터디 그룹 초대 토큰 저장 완료: {}", tokenKey);
+        } catch (Exception e) {
+            log.error("Redis 토큰 저장 실패: {}", tokenKey, e);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "초대 토큰 저장에 실패했습니다. 다시 시도해주세요.");
+        }
+
+        String subject = "스터디 그룹 [" + studyRoom.getRoomName() + "] 초대 메일";
+        String body = targetUserNickname + "님을 스터디 그룹 [" + studyRoom.getRoomName() + "]에 초대합니다.\n\n"
+                + "아래 링크를 클릭하여 초대를 수락해주세요.\n{invitationLink}\n\n"
+                + "이 링크는 " + expirationTime + " " + expirationUnit.toString().toLowerCase() + " 후 만료됩니다.";
+
+        try {
+            emailService.sendStudyInviteEmail(
+                    targetUser.getEmail(),     // 받는 사람 이메일
+                    subject,                   // 메일 제목
+                    body,                      // 메일 본문 (링크 플레이스홀더 포함)
+                    invitationToken            // 초대 토큰 자체를 전달하여 EmailService 내에서 링크 생성
+            );
+            log.info(" 회원에게 스터디 그룹 초대 메일 발송 완료", targetUserNickname, targetUser.getEmail());
+        } catch (Exception e) {
+            log.error("초대 메일 발송 실패: {}", targetUser.getEmail(), e);
+            throw new AppException(ErrorCode.EMAIL_SEND_FAILED, ErrorCode.EMAIL_SEND_FAILED.getMessage());
+        }
+    }
+
+    @Transactional
+    public void updateStudyGroupMemberStatus(Long roomId, Long memberId, MemberStatus newStatus, Long hostUserId) {
+        StudyRoomEntity studyRoom = studyRoomRepository.findByIdWithHost(roomId)
+                .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND, ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
+
+        if (!studyRoom.getHost().getUserId().equals(hostUserId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED_STUDY_GROUP_ACCESS, ErrorCode.UNAUTHORIZED_STUDY_GROUP_ACCESS.getMessage());
+        }
+
+        StudyMembersEntity memberToUpdate = studyMembersRepository.findById(memberId)
+                .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_MEMBER_NOT_FOUND, ErrorCode.STUDY_GROUP_MEMBER_NOT_FOUND.getMessage()));
+
+
+        if (!memberToUpdate.getStudyRoom().getRoomId().equals(roomId)) {
+            throw new AppException(ErrorCode.STUDY_GROUP_MEMBER_MISMATCH, ErrorCode.STUDY_GROUP_MEMBER_MISMATCH.getMessage());
+        }
+
+        if (memberToUpdate.getStatus() == MemberStatus.PENDING && newStatus == MemberStatus.ACTIVE) {
+            int currentActiveMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(roomId, MemberStatus.ACTIVE);
+            if (currentActiveMemberCount >= studyRoom.getCapacity()) {
+                throw new AppException(ErrorCode.STUDY_GROUP_CAPACITY_FULL, ErrorCode.STUDY_GROUP_CAPACITY_FULL.getMessage());
+            }
+        }
+
+        memberToUpdate.setStatus(newStatus);
+    }
+
+     @Transactional(readOnly = true)
+    public boolean isStudyGroupMember(Long roomId, Long userId) {
+        Optional<StudyMembersEntity> member = studyMembersRepository.findByStudyRoomRoomIdAndMemberUserIdAndStatus(roomId, userId, MemberStatus.ACTIVE);
+        return member.isPresent();
+    }
+
+    private String generateInvitationToken() {
+        //return java.util.UUID.randomUUID().toString(); // UUID 사용 시
+        return RandomStringUtils.randomAlphanumeric(32); // 32자리의 영숫자 랜덤 문자열
+    }
+
+
 }
+/*
+참가 요청 (requestJoinStudyGroup):
+요청한 유저가 이미 해당 스터디 그룹의 멤버인지 확인합니다.
+스터디 그룹의 현재 전체 멤버 수(PENDING 포함)를 확인하여 최대 인원을 초과했는지 확인합니다.
+모든 조건 통과 시 StudyMembersEntity를 PENDING 상태로 저장합니다.
+멤버 상태 업데이트 (updateStudyGroupMemberStatus):
+요청한 유저가 해당 스터디 그룹의 호스트인지 확인합니다.
+상태를 변경할 StudyMembersEntity(참가 요청한 게스트의 멤버 정보)를 조회합니다.
+조회된 멤버가 해당 스터디 그룹의 멤버인지 다시 한번 확인합니다.
+PENDING 상태의 멤버를 ACTIVE로 변경하려 할 때만, 현재 활성 멤버 수를 확인하여 최대 인원을 초과하지 않는지 검사합니다.
+상태를 newStatus로 업데이트합니다 (JPA Dirty Checking 활용).
+만약 거절(REJECTED) 등의 상태 변경 시 멤버 정보를 삭제하려면 추가 로직이 필요합니다.
+멤버 초대 (inviteStudyGroupMember):
+요청한 유저가 해당 스터디 그룹의 호스트인지 확인합니다.
+초대할 회원을 닉네임으로 조회합니다.
+초대할 회원이 이미 해당 스터디 그룹의 멤버인지 확인합니다.
+스터디 그룹의 현재 전체 멤버 수(PENDING 포함)를 확인하여 최대 인원을 초과했는지 확인합니다.
+ */
