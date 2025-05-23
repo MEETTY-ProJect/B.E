@@ -51,20 +51,53 @@ public class EmailService {
         }
     }
 
-    public void sendStudyInviteEmail(String to, String subject, String body, String invitationToken) throws MailException {
-        String invitationLink = baseUrl + "/study/invite/accept?token=" + invitationToken;
+    public void sendStudyInviteEmail(String to, String subject, String htmlBody, String invitationToken) throws MailException {
+        MimeMessage mimeMessage = javaMailSender.createMimeMessage();
 
-        // String finalBody = body.replace("{invitationLink}", invitationLink);
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            helper.setFrom("violetcarrot21@gmail.com");
+            helper.setTo(to);
+            helper.setSubject(subject);
+
+            String invitationLink = baseUrl + "/study/invite/accept?token=" + invitationToken;
+
+            String finalHtmlBody = htmlBody.replace("{invitationLink}", invitationLink);
+
+            helper.setText(finalHtmlBody, true);
+
+        } catch (Exception e) {
+            log.error("MimeMessageHelper를 사용한 메일 구성 실패", e);
+            throw new MailException("메일 구성 중 오류가 발생했습니다.", e) {};
+        }
+
+        javaMailSender.send(mimeMessage);
+        log.info("스터디 초대 메일 발송 (MimeMessageHelper): 받는 사람={}, 제목={}", to, subject);
+    }
+    /*
+            // TODO: 필요하다면 첨부 파일 추가
+            // File attachment = new File("경로/파일.pdf");
+            // helper.addAttachment("파일이름.pdf", attachment);
+
+            // TODO: 필요하다면 인라인 이미지 추가 (HTML 본문에서 <img src='cid:imageId'> 형태로 참조)
+            // ClassPathResource image = new ClassPathResource("경로/이미지.png");
+            // helper.addInline("imageId", image);
+    */
+}
+
+
+/*  SimpleMailMessage의 경우 단순 테스트만 가능
+        String invitationLink = baseUrl + "/study/invite/accept?token=" + invitationToken;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
         message.setSubject(subject);
+
+        // String finalBody = body.replace("{invitationLink}", invitationLink);
 
         String finalBody = body + "\n\n초대 수락 링크: " + invitationLink;
 
         message.setText(finalBody);
         javaMailSender.send(message);
         log.info("스터디 초대 메일 발송: 받는 사람={}, 제목={}", to, subject);
-    }
-
-}
+    */
