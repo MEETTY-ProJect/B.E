@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class StudyRoomResponse {
     private Long id;
     private String roomName;
+    private String hostName;
     private String introduction;
     private int capacity;
     private int currentMemberCount;
@@ -22,6 +23,7 @@ public class StudyRoomResponse {
     public StudyRoomResponse(StudyRoomEntity studyGroup, int currentMemberCount) {
         this.id = studyGroup.getRoomId();
         this.roomName = studyGroup.getRoomName();
+        this.hostName = studyGroup.getHostName();
         this.introduction = studyGroup.getIntroduction();
         this.capacity = studyGroup.getCapacity();
         this.purpose = studyGroup.getPurpose();
