@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket 알림 테스트</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+  <h2>WebSocket 알림 테스트 페이지</h2>
+  <p>이 페이지는 Spring WebSocket 알림을 테스트하는 용도입니다.</p>
+  <button onclick="connect()">🔌 WebSocket 연결</button>
+  <button onclick="send()">📨 알림 전송</button>
+
+  <script>
+    let stompClient = null;
+
+    // 🟡 여기에 실제 JWT 토큰을 붙여넣으세요
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJoaGhjMDIxM0BuYXZlci5jb20iLCJyb2xlIjoiUk9MRV9VU0VSIiwidXNlcklkIjo0LCJpYXQiOjE3NDc4ODAwNTIsImV4cCI6MTc0NzkyMzI1Mn0.Fud3r1XKj2D4JGrcQl7IQfVEkXouKoRE5g_UUz4Ou8I";
+
+    // 🟡 여기에 테스트할 유저 ID를 넣으세요 (ex: 3)
+    const userId = 4;
+
+    function connect() {
+      const socket = new SockJS("http://localhost:8080/ws?token=" + jwt);
+      stompClient = Stomp.over(socket);
+
+      stompClient.connect({}, function (frame) {
+        console.log("✅ WebSocket 연결됨:", frame);
+
+        stompClient.subscribe("/topic/user/" + userId, function (message) {
+          const data = JSON.parse(message.body);
+          alert("🔔 수신된 알림: " + data.content);
+        });
+      });
+    }
+
+    function send() {
+      stompClient.send("/app/notify", {}, JSON.stringify({
+        notificationType: "STUDY_JOIN_REQUEST",
+        content: "테스트 알림입니다!",
+        url: "/study/123"
+      }));
+    }
+  </script>
+</body>
+</html>
