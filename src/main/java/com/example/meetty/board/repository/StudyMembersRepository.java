@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface StudyMembersRepository extends JpaRepository<StudyMembersEntity,Long> {
@@ -22,9 +23,16 @@ public interface StudyMembersRepository extends JpaRepository<StudyMembersEntity
             "GROUP BY sm.studyRoom.roomId")
     List<Object[]> countActiveMembersByRoomIds(@Param("roomIds") List<Long> roomIds, @Param("status") MemberStatus status);
 
-    // 특정 스터디 그룹에 특정 사용자가 'ACTIVE' 상태로 존재하는지 확인하는 메서드
-    boolean existsByStudyRoomRoomIdAndMemberUserIdAndStatus(Long studyGroupId, Long userId, MemberStatus status);
-
     //특정 스터디 그룹에 속해있는 사용자가 맞는지 확인하는 메서드
     boolean existsByStudyRoom_RoomIdAndMember_UserId(Long roomId, Long userId);
+
+    // 특정 스터디 룸에 특정 유저의 멤버십 정보가 있는지 확인
+    Optional<StudyMembersEntity> findByStudyRoomRoomIdAndMemberUserId(Long roomId, Long userId);
+
+
+    // 특정 스터디 룸에 특정 유저의 특정 상태 멤버십 정보 조회 (예: PENDING 상태)
+    Optional<StudyMembersEntity> findByStudyRoomRoomIdAndMemberUserIdAndStatus(Long roomId, Long userId, MemberStatus status);
+
+    // 특정 스터디 룸의 모든 멤버 정보 조회
+    List<StudyMembersEntity> findByStudyRoomRoomId(Long roomId);
 }

@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -48,4 +50,21 @@ public class EmailService {
             throw new AppException(ErrorCode.EMAIL_SEND_FAIL);
         }
     }
+
+    public void sendStudyInviteEmail(String to, String subject, String body, String invitationToken) throws MailException {
+        String invitationLink = baseUrl + "/study/invite/accept?token=" + invitationToken;
+
+        // String finalBody = body.replace("{invitationLink}", invitationLink);
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject(subject);
+
+        String finalBody = body + "\n\n초대 수락 링크: " + invitationLink;
+
+        message.setText(finalBody);
+        javaMailSender.send(message);
+        log.info("스터디 초대 메일 발송: 받는 사람={}, 제목={}", to, subject);
+    }
+
 }

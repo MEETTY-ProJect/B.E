@@ -72,5 +72,42 @@ public class BoardController {
         boardService.deleteStudyGroup(id,userId);
         return ResponseEntity.ok(ApiResponse.success("스터디 그룹 삭제가 완료되었습니다."));
     }
+
+    @Operation(summary = "스터디 그룹 참가 요청", description = "게스트 회원이 스터디 그룹에 참가를 요청합니다.")
+    @PostMapping("/{roomId}/join")
+    public ResponseEntity<ApiResponse<String>> requestJoinStudyGroup(
+            @PathVariable Long roomId,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        Long userId = currentUser.getUserId();
+        boardService.requestJoinStudyGroup(roomId, userId);
+        // 참가 요청 성공 시 메시지 반환
+        return ResponseEntity.ok(ApiResponse.success("스터디 그룹 참가 요청이 완료되었습니다."));
+    }
+
+    @Operation(summary = "스터디 그룹 참가 요청 승인/거절", description = "호스트가 게스트 회원의 참가 요청을 승인하거나 거절합니다. memberId는 StudyMembersEntity의 ID입니다.")
+    @PutMapping("/{roomId}/members/{memberId}")
+    public ResponseEntity<ApiResponse<String>> updateStudyGroupMemberStatus(
+            @PathVariable Long roomId,
+            @PathVariable Long memberId,
+            @Valid @RequestBody UpdateMemberStatusRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        Long hostUserId = currentUser.getUserId();
+        boardService.updateStudyGroupMemberStatus(roomId, memberId, request.getStatus(), hostUserId);
+        return ResponseEntity.ok(ApiResponse.success("스터디 그룹 멤버 상태가 성공적으로 업데이트되었습니다."));
+    }
+
+    @Operation(summary = "스터디 그룹 멤버 초대", description = "호스트가 다른 회원을 스터디 그룹에 초대합니다. (초대 링크 발송 로직은 주석 처리)")
+    @PostMapping("/{roomId}/invite")
+    public ResponseEntity<ApiResponse<String>> inviteStudyGroupMember(
+            @PathVariable Long roomId,
+            @Valid @RequestBody JoinRequestDTO request,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        Long hostUserId = currentUser.getUserId();
+        boardService.inviteStudyGroupMember(roomId, request.getTargetUserNickname(), hostUserId);
+        return ResponseEntity.ok(ApiResponse.success(request.getTargetUserNickname() + " 회원에게 스터디 그룹 초대 메일이 발송되었습니다."));
+    }
+
+    // 스터디 그룹 멤버십 확인 로직 (API Gateway 또는 필터 레벨에서 구현될 수 있음)
+    // 예: 특정 엔드포인트 진입 시 멤버인지 확인하는 인터셉터/필터 적용
 }
 

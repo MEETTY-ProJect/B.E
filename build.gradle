@@ -79,6 +79,9 @@ dependencies {
     implementation 'io.lettuce:lettuce-core'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
+    //Commons Lang3
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
+
     // e-mail
     implementation 'org.springframework.boot:spring-boot-starter-mail'
 
