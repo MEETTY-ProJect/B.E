@@ -241,18 +241,22 @@ public class BoardService {
         }
 
         String subject = "스터디 그룹 [" + studyRoom.getRoomName() + "] 초대 메일";
-        String body = targetUserNickname + "님을 스터디 그룹 [" + studyRoom.getRoomName() + "]에 초대합니다.\n\n"
-                + "아래 링크를 클릭하여 초대를 수락해주세요.\n{invitationLink}\n\n"
-                + "이 링크는 " + expirationTime + " " + expirationUnit.toString().toLowerCase() + " 후 만료됩니다.";
+        String htmlBody = "<html><body>"
+                + "<p>" + targetUserNickname + "님을 스터디 그룹 [" + studyRoom.getRoomName() + "]에 초대합니다.</p>"
+                + "<p>아래 링크를 클릭하여 초대를 수락해주세요.</p>"
+                + "<p><a href='{invitationLink}'>초대 수락하기</a></p>"
+                + "<p>이 링크는 " + expirationTime + " " + expirationUnit.toString().toLowerCase() + " 후 만료됩니다.</p>"
+                + "</body></html>";
 
+                // 이미지 추가 시 <img src='cid:imageId'> 등 사용
         try {
             emailService.sendStudyInviteEmail(
-                    targetUser.getEmail(),     // 받는 사람 이메일
-                    subject,                   // 메일 제목
-                    body,                      // 메일 본문 (링크 플레이스홀더 포함)
-                    invitationToken            // 초대 토큰 자체를 전달하여 EmailService 내에서 링크 생성
+                    targetUser.getEmail(),
+                    subject,
+                    htmlBody,
+                    invitationToken
             );
-            log.info(" 회원에게 스터디 그룹 초대 메일 발송 완료", targetUserNickname, targetUser.getEmail());
+            log.info("{} ({}) 회원에게 스터디 그룹 초대 메일 (HTML) 발송 완료", targetUserNickname, targetUser.getEmail());
         } catch (Exception e) {
             log.error("초대 메일 발송 실패: {}", targetUser.getEmail(), e);
             throw new AppException(ErrorCode.EMAIL_SEND_FAILED, ErrorCode.EMAIL_SEND_FAILED.getMessage());
