@@ -20,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -41,6 +44,8 @@ public class BoardService {
                 .purpose(request.getPurpose())
                 .region(request.getRegion())
                 .host(currentUser)
+                .hostName(currentUser.getUsername())
+                .createdAt(LocalDateTime.now())
                 .build();
 
         StudyRoomEntity savedStudyGroup = studyRoomRepository.save(studyGroup);
@@ -97,8 +102,27 @@ public class BoardService {
             studyGroupPage = studyRoomRepository.findAllWithHost(pageable);
         }
 
+        List<Long> roomIds = studyGroupPage.getContent().stream()
+                .map(StudyRoomEntity::getRoomId)
+                .collect(Collectors.toList());
+
+        // 만약 현재 페이지에 스터디 룸이 없다면 (빈 페이지), 카운트 쿼리를 실행할 필요가 없습니다.
+        if (roomIds.isEmpty()) {
+            return new StudyRoomListResponse(studyGroupPage.map(studyGroup ->
+                    new StudyRoomListCardResponse(studyGroup, 0)
+            ));
+        }
+
+        List<Object[]> memberCounts = studyMembersRepository.countActiveMembersByRoomIds(roomIds, MemberStatus.ACTIVE);
+
+        Map<Long, Integer> memberCountMap = memberCounts.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],     // 스터디 룸 ID
+                        row -> ((Long) row[1]).intValue() // 멤버 수
+                ));
+
         Page<StudyRoomListCardResponse> responsePage = studyGroupPage.map(studyGroup -> {
-            int currentMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(studyGroup.getRoomId(), MemberStatus.ACTIVE);
+            int currentMemberCount = memberCountMap.getOrDefault(studyGroup.getRoomId(), 0);
             return new StudyRoomListCardResponse(studyGroup, currentMemberCount);
         });
 
@@ -108,7 +132,7 @@ public class BoardService {
 
     @Transactional
     public StudyRoomResponse updateStudyGroup(Long id, UpdateStudyRoomRequest request,Long userId) {
-        StudyRoomEntity studyGroup = studyRoomRepository.findById(id)
+        StudyRoomEntity studyGroup = studyRoomRepository.findByIdWithHost(id)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND,ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
 
         if (!studyGroup.getHost().getUserId().equals(userId)) {
@@ -124,12 +148,18 @@ public class BoardService {
 
     @Transactional
     public void deleteStudyGroup(Long id,Long userId) {
-        StudyRoomEntity studyGroup = studyRoomRepository.findById(id)
+        StudyRoomEntity studyGroup = studyRoomRepository.findByIdWithHost(id)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND,ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
 
         // 호스트만 삭제 가능
         if (!studyGroup.getHost().getUserId().equals(userId)) {
             throw new AppException(ErrorCode.UNAUTHORIZED_STUDY_GROUP_ACCESS,ErrorCode.UNAUTHORIZED_STUDY_GROUP_ACCESS.getMessage());
+        }
+
+        int totalActiveMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(studyGroup.getRoomId(), MemberStatus.ACTIVE);
+
+        if (totalActiveMemberCount > 1) {
+            throw new AppException(ErrorCode.STUDY_GROUP_DELETE_FAILED_HAS_MEMBERS, ErrorCode.STUDY_GROUP_DELETE_FAILED_HAS_MEMBERS.getMessage());
         }
 
         studyRoomRepository.delete(studyGroup);

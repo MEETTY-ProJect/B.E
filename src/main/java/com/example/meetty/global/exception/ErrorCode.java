@@ -37,7 +37,7 @@ public enum ErrorCode {
     // StudyRoom 에러코드
     STUDY_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 스터디 그룹을 찾을 수 없습니다."),
     UNAUTHORIZED_STUDY_GROUP_ACCESS(HttpStatus.FORBIDDEN, "스터디 그룹에 대한 권한이 없습니다."),
-
+    STUDY_GROUP_DELETE_FAILED_HAS_MEMBERS(HttpStatus.BAD_REQUEST, "스터디 그룹에 참여 중인 다른 멤버가 있어 삭제할 수 없습니다."),
     //chat 에러코드
     UNAUTHORIZED_STUDY_ROOM_CHAT(HttpStatus.FORBIDDEN, "해당 스터디방에 참여하지 않은 유저입니다.")
 
