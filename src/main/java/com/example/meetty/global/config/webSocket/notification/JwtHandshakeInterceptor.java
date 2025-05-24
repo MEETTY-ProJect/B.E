@@ -1,4 +1,4 @@
-package com.example.meetty.global.config.webSocket;
+package com.example.meetty.global.config.webSocket.notification;
 
 import com.example.meetty.global.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;

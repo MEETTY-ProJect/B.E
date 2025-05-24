@@ -1,0 +1,45 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+actor Client1
+actor Client2
+actor Client3
+
+package "클라이언트 영역" {
+  Client1 --> "카메라/마이크\n(WebRTC)"
+  Client2 --> "WebSocket 연결\n/ws/video?room=<id>&token=<token>"
+  Client3 --> "WebSocket 연결\n/ws/video?room=<id>&token=<token>"
+}
+
+package "서버 영역\n(Spring Boot)" {
+  [JwtTokenProvider\n- JWT 검증 및 userId 추출] as JWT
+  [SignalingHandler\n- 방 멤버 검증\n- 시그널링 메시지 1:1 라우팅] as Handler
+  [세션·유저·방 관리\nMap 저장] as SessionMap
+  [participants 목록 응답\n(각 클라이언트는 다른 2명에게 연결됨)] as Participants
+}
+
+package "Peer 연결 영역" {
+  [RTCPeerConnection 생성] as PC
+  [offer/answer/candidate\n시그널링 메시지 교환] as Signaling
+}
+
+' 클라이언트 → 서버 흐름
+"카메라/마이크\n(WebRTC)" --> JWT
+"WebSocket 연결\n/ws/video?room=<id>&token=<token>" --> Handler
+"WebSocket 연결\n/ws/video?room=<id>&token=<token>" --> Handler
+
+' 서버 내부 순서
+JWT --> Handler
+Handler --> SessionMap
+SessionMap --> Participants
+
+' 서버 → Peer 연결
+Participants --> PC
+
+' Peer 시그널링
+PC --> Signaling
+
+@enduml
