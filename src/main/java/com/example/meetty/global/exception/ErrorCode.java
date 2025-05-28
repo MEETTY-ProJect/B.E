@@ -47,8 +47,11 @@ public enum ErrorCode {
     INVITE_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "유효하지 않거나 만료된 초대 링크입니다."), // 초대 수락 시 필요
     INVITE_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "이미 사용된 초대 링크입니다."), // 초대 수락 시 필요
 
-    //chat 에러코드
-    UNAUTHORIZED_STUDY_ROOM_CHAT(HttpStatus.FORBIDDEN, "해당 스터디방에 참여하지 않은 유저입니다.")
+    // Chat 에러코드
+    UNAUTHORIZED_STUDY_ROOM_CHAT(HttpStatus.FORBIDDEN, "해당 스터디방에 참여하지 않은 유저입니다."),
+
+    // Notification 에러코드
+    NOT_FOUND_NOTIFICATION(HttpStatus.NOT_FOUND, "해당 알림을 찾을 수 없습니다.")
 
     ;
 
