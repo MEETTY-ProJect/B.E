@@ -2,6 +2,8 @@ package com.example.meetty.notification.service;
 
 import com.example.meetty.auth.entity.UserEntity;
 import com.example.meetty.auth.repository.UserRepository;
+import com.example.meetty.global.exception.AppException;
+import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.notification.dto.NotificationResponseDto;
 import com.example.meetty.notification.entity.NotificationEntity;
 import com.example.meetty.notification.entity.NotificationType;
@@ -10,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,6 +25,7 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
 
+    @Transactional
     // 알림을 저장하고 WebSocket으로 전송하는 핵심 메서드
     public void notifyUser(Long receiverId, NotificationType notificationType, String content, String url) {
         // 1. 수신자 조회
@@ -49,10 +53,50 @@ public class NotificationService {
         log.info("🔔 [{}] 알림 전송 완료 to userId={}", notificationType, receiverId);
     }
 
-    // 알림 메시지 조회
+    // 모든 알림 조회
     public List<NotificationResponseDto> getUserNotifications(UserEntity receiver) {
         return notificationRepository.findByReceiverOrderByCreatedAtDesc(receiver).stream()
                 .map(NotificationResponseDto::new)
                 .collect(Collectors.toList());
+    }
+
+
+    // 지정한 알림을 '읽음'상태로 전환
+    @Transactional
+    public void markAsRead(Long notificationId, Long userId) {
+        UserEntity receiver = userRepository.findByUserId(userId).orElseThrow(
+                () -> new AppException(ErrorCode.USER_NOT_FOUND)
+        );
+
+        NotificationEntity notificationEntity = notificationRepository.findByNotificationIdAndReceiver(notificationId, receiver).orElseThrow(
+                () -> new AppException(ErrorCode.NOT_FOUND_NOTIFICATION)
+        );
+
+        if (!notificationEntity.isRead()) {
+            notificationEntity.markAsRead();
+        }
+    }
+
+    // 지정한 알림 삭제
+    @Transactional
+    public void deleteNotification(Long notificationId, Long userId) {
+        UserEntity receiver = userRepository.findByUserId(userId).orElseThrow(
+                () -> new AppException(ErrorCode.USER_NOT_FOUND)
+        );
+
+        NotificationEntity notificationEntity = notificationRepository.findByNotificationIdAndReceiver(notificationId, receiver).orElseThrow(
+                () -> new AppException(ErrorCode.NOT_FOUND_NOTIFICATION)
+        );
+
+        notificationRepository.delete(notificationEntity);
+    }
+
+    // 모든 알림 삭제
+    @Transactional
+    public void deleteAllNotifications(Long userId) {
+        UserEntity receiver = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        notificationRepository.deleteAllByReceiver(receiver);
     }
 }

@@ -18,9 +18,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -48,4 +46,32 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.success(notifications));
     }
 
+    @Operation(summary = "알림 읽음 처리 API", description = "경로에 설정한 notification_id를 가진 알림을 '읽음'으로 변경합니다.")
+    @PatchMapping("/v1/notifications/{notificationId}/read")
+    public ResponseEntity<ApiResponse<String>> markAsRead(
+            @PathVariable Long notificationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        notificationService.markAsRead(notificationId, userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponse.success("알림 읽음 처리 완료"));
+    }
+
+    @Operation(summary = "알림 삭제 API", description = "경로에 설정한 notification_id를 가진 알림을 삭제합니다.")
+    @DeleteMapping("/v1/notifications/{notificationId}")
+    public ResponseEntity<ApiResponse<String>> deleteNotification(
+            @PathVariable Long notificationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        notificationService.deleteNotification(notificationId, userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponse.success("알림 삭제 완료"));
+    }
+
+    @Operation(summary = "전체 알림 삭제 API", description = "사용자의 모든 알림을 삭제합니다.")
+    @DeleteMapping("/v1/notifications")
+    public ResponseEntity<ApiResponse<String>> deleteAllNotifications(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        notificationService.deleteAllNotifications(userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponse.success("전체 알림 삭제 완료"));
+    }
 }
