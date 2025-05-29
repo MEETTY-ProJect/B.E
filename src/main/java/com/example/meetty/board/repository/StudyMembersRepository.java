@@ -15,7 +15,7 @@ import java.util.Optional;
 @Repository
 public interface StudyMembersRepository extends JpaRepository<StudyMembersEntity,Long> {
     // 특정 스터디 그룹의 'ACTIVE' 상태 멤버 수를 세는 메서드
-    int countByStudyRoomRoomIdAndStatus(Long studyGroupId, MemberStatus status);
+    int countByStudyRoomRoomIdAndStatus(Long roomId, MemberStatus status);
 
     @Query("SELECT sm.studyRoom.roomId, COUNT(sm) " +
             "FROM StudyMembersEntity sm " +
@@ -33,6 +33,7 @@ public interface StudyMembersRepository extends JpaRepository<StudyMembersEntity
     // 특정 스터디 룸에 특정 유저의 특정 상태 멤버십 정보 조회 (예: PENDING 상태)
     Optional<StudyMembersEntity> findByStudyRoomRoomIdAndMemberUserIdAndStatus(Long roomId, Long userId, MemberStatus status);
 
-    // 특정 스터디 룸의 모든 멤버 정보 조회
-    List<StudyMembersEntity> findByStudyRoomRoomId(Long roomId);
+    // 로그인된 회원이 속한 특정 스터디 룸의 정보 조회
+    @Query("SELECT sm FROM StudyMembersEntity sm JOIN FETCH sm.studyRoom WHERE sm.member = :user AND sm.status = :status")
+    List<StudyMembersEntity> findByMemberAndStatus(UserEntity user, MemberStatus status);
 }

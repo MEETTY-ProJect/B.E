@@ -19,6 +19,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @Slf4j
@@ -107,7 +109,14 @@ public class BoardController {
         return ResponseEntity.ok(ApiResponse.success(request.getTargetUserNickname() + " 회원에게 스터디 그룹 초대 메일이 발송되었습니다."));
     }
 
-    // 스터디 그룹 멤버십 확인 로직 (API Gateway 또는 필터 레벨에서 구현될 수 있음)
-    // 예: 특정 엔드포인트 진입 시 멤버인지 확인하는 인터셉터/필터 적용
+    @Operation(summary = "내가 속해 있는 스터디 룸 목록", description = "마이페이지에서 내가 속한 스터디 룸 목록을 확인합니다.")
+    @GetMapping("/my")
+    public ResponseEntity<ApiResponse<List<StudyRoomListCardResponse>>> getMyStudyRooms(
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        Long hostUserId = currentUser.getUserId();
+        List<StudyRoomListCardResponse> response = boardService.getMyStudyRooms(hostUserId);
+        ApiResponse<List<StudyRoomListCardResponse>> successResponse = ApiResponse.success(response);
+        return ResponseEntity.ok(successResponse);
+    }
 }
 
