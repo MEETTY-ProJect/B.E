@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -173,7 +174,7 @@ public class BoardService {
 
         studyRoomRepository.delete(studyGroup);
     }
-
+// ----------------------------------------------------------------------------------------------------------------------
     @Transactional
     public void requestJoinStudyGroup(Long roomId, Long userId) {
         StudyRoomEntity studyRoom = studyRoomRepository.findByIdWithHost(roomId)
@@ -290,6 +291,37 @@ public class BoardService {
         memberToUpdate.setStatus(newStatus);
     }
 
+    public List<StudyRoomListCardResponse> getMyStudyRooms(Long hostUserId) {
+        UserEntity currentUser = userRepository.findById(hostUserId)
+                .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND,ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
+
+        List<StudyMembersEntity> activeMemberships = studyMembersRepository.findByMemberAndStatus(currentUser, MemberStatus.ACTIVE);
+
+        if (activeMemberships.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> roomIds = activeMemberships.stream()
+                .map(membership -> membership.getStudyRoom().getRoomId())
+                .collect(Collectors.toList());
+
+        List<Object[]> memberCounts = studyMembersRepository.countActiveMembersByRoomIds(roomIds, MemberStatus.ACTIVE);
+
+        Map<Long, Integer> memberCountMap = memberCounts.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> ((Long) row[1]).intValue()
+                ));
+        List<StudyRoomListCardResponse> studyRoomList = activeMemberships.stream()
+                .map(membership -> {
+                    StudyRoomEntity studyRoom = membership.getStudyRoom();
+                    int currentMemberCount = memberCountMap.getOrDefault(studyRoom.getRoomId(), 0);
+                    return new StudyRoomListCardResponse(studyRoom, currentMemberCount);
+                })
+                .collect(Collectors.toList());
+        return studyRoomList;
+    }
+
      @Transactional(readOnly = true)
     public boolean isStudyGroupMember(Long roomId, Long userId) {
         Optional<StudyMembersEntity> member = studyMembersRepository.findByStudyRoomRoomIdAndMemberUserIdAndStatus(roomId, userId, MemberStatus.ACTIVE);
@@ -302,22 +334,5 @@ public class BoardService {
     }
 
 
+
 }
-/*
-참가 요청 (requestJoinStudyGroup):
-요청한 유저가 이미 해당 스터디 그룹의 멤버인지 확인합니다.
-스터디 그룹의 현재 전체 멤버 수(PENDING 포함)를 확인하여 최대 인원을 초과했는지 확인합니다.
-모든 조건 통과 시 StudyMembersEntity를 PENDING 상태로 저장합니다.
-멤버 상태 업데이트 (updateStudyGroupMemberStatus):
-요청한 유저가 해당 스터디 그룹의 호스트인지 확인합니다.
-상태를 변경할 StudyMembersEntity(참가 요청한 게스트의 멤버 정보)를 조회합니다.
-조회된 멤버가 해당 스터디 그룹의 멤버인지 다시 한번 확인합니다.
-PENDING 상태의 멤버를 ACTIVE로 변경하려 할 때만, 현재 활성 멤버 수를 확인하여 최대 인원을 초과하지 않는지 검사합니다.
-상태를 newStatus로 업데이트합니다 (JPA Dirty Checking 활용).
-만약 거절(REJECTED) 등의 상태 변경 시 멤버 정보를 삭제하려면 추가 로직이 필요합니다.
-멤버 초대 (inviteStudyGroupMember):
-요청한 유저가 해당 스터디 그룹의 호스트인지 확인합니다.
-초대할 회원을 닉네임으로 조회합니다.
-초대할 회원이 이미 해당 스터디 그룹의 멤버인지 확인합니다.
-스터디 그룹의 현재 전체 멤버 수(PENDING 포함)를 확인하여 최대 인원을 초과했는지 확인합니다.
- */
