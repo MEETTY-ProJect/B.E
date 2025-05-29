@@ -177,19 +177,36 @@ public class BoardService {
 // ----------------------------------------------------------------------------------------------------------------------
     @Transactional
     public void requestJoinStudyGroup(Long roomId, Long userId) {
-        StudyRoomEntity studyRoom = studyRoomRepository.findByIdWithHost(roomId)
+        StudyRoomEntity studyRoom = studyRoomRepository.findByIdWithHostAndLock(roomId)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND, ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
 
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, ErrorCode.USER_NOT_FOUND.getMessage()));
 
+        Optional<StudyMembersEntity> bannedMemberHistory =
+                studyMembersRepository.findByStudyRoomRoomIdAndMemberUserIdAndStatus(roomId, userId, MemberStatus.BANNED);
+
+        if (bannedMemberHistory.isPresent()) {
+            throw new AppException(ErrorCode.ALREADY_BANNED_FROM_STUDY_GROUP, ErrorCode.ALREADY_BANNED_FROM_STUDY_GROUP.getMessage());
+        }
+
+        String studyRoomRegion = studyRoom.getRegion();
+        String userRegion = user.getAddress();
+
+        if (studyRoomRegion != null && !studyRoomRegion.isEmpty() &&
+                (userRegion == null || !studyRoomRegion.equals(userRegion))) {
+            throw new AppException(ErrorCode.REGION_MISMATCH, ErrorCode.REGION_MISMATCH.getMessage());
+        }
+
         Optional<StudyMembersEntity> existingMember = studyMembersRepository.findByStudyRoomRoomIdAndMemberUserId(roomId, userId);
+
         if (existingMember.isPresent()) {
             throw new AppException(ErrorCode.ALREADY_STUDY_GROUP_MEMBER, ErrorCode.ALREADY_STUDY_GROUP_MEMBER.getMessage());
         }
 
         // 최대 인원 확인
         int currentActiveMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(roomId, MemberStatus.ACTIVE);
+
         if (currentActiveMemberCount >= studyRoom.getCapacity()) {
             throw new AppException(ErrorCode.STUDY_GROUP_CAPACITY_FULL, ErrorCode.STUDY_GROUP_CAPACITY_FULL.getMessage());
         }
