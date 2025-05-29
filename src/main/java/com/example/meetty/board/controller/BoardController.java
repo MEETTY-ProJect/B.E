@@ -78,11 +78,10 @@ public class BoardController {
     @Operation(summary = "스터디 그룹 참가 요청", description = "게스트 회원이 스터디 그룹에 참가를 요청합니다.")
     @PostMapping("/{roomId}/join")
     public ResponseEntity<ApiResponse<String>> requestJoinStudyGroup(
-            @PathVariable Long roomId,
+            @Valid @PathVariable Long roomId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         Long userId = currentUser.getUserId();
         boardService.requestJoinStudyGroup(roomId, userId);
-        // 참가 요청 성공 시 메시지 반환
         return ResponseEntity.ok(ApiResponse.success("스터디 그룹 참가 요청이 완료되었습니다."));
     }
 
