@@ -48,6 +48,11 @@ public enum ErrorCode {
     INVITE_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "이미 사용된 초대 링크입니다."),
     ALREADY_BANNED_FROM_STUDY_GROUP(HttpStatus.FORBIDDEN,"해당 스터디 그룹에서 차단되어 재가입할 수 없습니다."),
     REGION_MISMATCH(HttpStatus.FORBIDDEN,"해당 스터디 그룹에 설정된 지역와 회원님이 설정한 지역이 일치하지 않습니다."),
+    ALREADY_ACTIVE_MEMBER(HttpStatus.BAD_REQUEST,"이미 활성 상태인 멤버입니다."),
+     ALREADY_REJECTED_MEMBER(HttpStatus.BAD_REQUEST,"이미 거절된 멤버입니다."),
+     ALREADY_PENDING_MEMBER(HttpStatus.BAD_REQUEST,"이미 대기 상태인 멤버입니다."),
+     CANNOT_CHANGE_REJECTED_MEMBER_STATUS(HttpStatus.FORBIDDEN,"거절된 멤버의 상태는 변경할 수 없습니다. 다시 참가 요청을 해주세요."),
+     INVALID_MEMBER_STATUS_TRANSITION(HttpStatus.FORBIDDEN,"유효하지 않은 멤버 상태 변경입니다."),
 
     // Chat 에러코드
     UNAUTHORIZED_STUDY_ROOM_CHAT(HttpStatus.FORBIDDEN, "해당 스터디방에 참여하지 않은 유저입니다."),

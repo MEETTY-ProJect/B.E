@@ -194,7 +194,7 @@ public class BoardService {
         String userRegion = user.getAddress();
 
         if (studyRoomRegion != null && !studyRoomRegion.isEmpty() &&
-                (userRegion == null || !studyRoomRegion.equals(userRegion))) {
+                (userRegion != null && !studyRoomRegion.equals(userRegion))) {
             throw new AppException(ErrorCode.REGION_MISMATCH, ErrorCode.REGION_MISMATCH.getMessage());
         }
 
@@ -298,11 +298,37 @@ public class BoardService {
             throw new AppException(ErrorCode.STUDY_GROUP_MEMBER_MISMATCH, ErrorCode.STUDY_GROUP_MEMBER_MISMATCH.getMessage());
         }
 
-        if (memberToUpdate.getStatus() == MemberStatus.PENDING && newStatus == MemberStatus.ACTIVE) {
-            int currentActiveMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(roomId, MemberStatus.ACTIVE);
-            if (currentActiveMemberCount >= studyRoom.getCapacity()) {
-                throw new AppException(ErrorCode.STUDY_GROUP_CAPACITY_FULL, ErrorCode.STUDY_GROUP_CAPACITY_FULL.getMessage());
+        MemberStatus currentStatus = memberToUpdate.getStatus();
+
+        if (currentStatus == MemberStatus.ACTIVE) {
+            // 이미 활성 상태인 경우
+            if (newStatus == MemberStatus.ACTIVE) {
+                throw new AppException(ErrorCode.ALREADY_ACTIVE_MEMBER, ErrorCode.ALREADY_ACTIVE_MEMBER.getMessage());
+            } else if (newStatus == MemberStatus.PENDING) {
+                throw new AppException(ErrorCode.INVALID_MEMBER_STATUS_TRANSITION, ErrorCode.INVALID_MEMBER_STATUS_TRANSITION.getMessage());
             }
+        } else if (currentStatus == MemberStatus.REJECTED) {
+            // 이미 거절된 상태인 경우
+            if (newStatus == MemberStatus.REJECTED) {
+                throw new AppException(ErrorCode.ALREADY_REJECTED_MEMBER, ErrorCode.ALREADY_REJECTED_MEMBER.getMessage());
+            } else {
+                // 거절된 멤버를 활성 또는 대기 상태로 바로 변경하는 것은 막음 (재신청 필요)
+                throw new AppException(ErrorCode.CANNOT_CHANGE_REJECTED_MEMBER_STATUS, ErrorCode.CANNOT_CHANGE_REJECTED_MEMBER_STATUS.getMessage());
+            }
+        } else if (currentStatus == MemberStatus.PENDING) {
+            // 대기 상태인 경우
+            if (newStatus == MemberStatus.PENDING) {
+                throw new AppException(ErrorCode.ALREADY_PENDING_MEMBER, ErrorCode.ALREADY_PENDING_MEMBER.getMessage());
+            } else if (newStatus == MemberStatus.ACTIVE) {
+                int currentActiveMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(roomId, MemberStatus.ACTIVE);
+                if (currentActiveMemberCount >= studyRoom.getCapacity()) {
+                    throw new AppException(ErrorCode.STUDY_GROUP_CAPACITY_FULL, ErrorCode.STUDY_GROUP_CAPACITY_FULL.getMessage());
+                }
+            }
+            // PENDING -> Rejected는 이 로직 아래에서 처리 (거절)
+        } else {
+            // 정의되지 않은 다른 상태값인 경우 처리
+            throw new AppException(ErrorCode.INVALID_MEMBER_STATUS_TRANSITION, ErrorCode.INVALID_MEMBER_STATUS_TRANSITION.getMessage());
         }
 
         memberToUpdate.setStatus(newStatus);
