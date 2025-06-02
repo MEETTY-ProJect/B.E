@@ -37,6 +37,22 @@ public enum ErrorCode {
     // StudyRoom 에러코드
     STUDY_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 스터디 그룹을 찾을 수 없습니다."),
     UNAUTHORIZED_STUDY_GROUP_ACCESS(HttpStatus.FORBIDDEN, "스터디 그룹에 대한 권한이 없습니다."),
+    STUDY_GROUP_DELETE_FAILED_HAS_MEMBERS(HttpStatus.BAD_REQUEST, "스터디 그룹에 참여 중인 다른 멤버가 있어 삭제할 수 없습니다."),
+    // 스터디 그룹 참가/초대 관련 에러 (새로 추가)
+    ALREADY_STUDY_GROUP_MEMBER(HttpStatus.CONFLICT, "이미 스터티 그룹 멤버입니다."),
+    STUDY_GROUP_CAPACITY_FULL(HttpStatus.CONFLICT, "스터디 그룹 인원이 가득 찼습니다."),
+    STUDY_GROUP_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 스터디 그룹 멤버를 찾을 수 없습니다."),
+    STUDY_GROUP_MEMBER_MISMATCH(HttpStatus.BAD_REQUEST, "요청된 스터디 그룹과 멤버 정보가 일치하지 않습니다."),
+    EMAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "이메일 발송에 실패했습니다."),
+    INVITE_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "유효하지 않거나 만료된 초대 링크입니다."),
+    INVITE_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "이미 사용된 초대 링크입니다."),
+    ALREADY_BANNED_FROM_STUDY_GROUP(HttpStatus.FORBIDDEN,"해당 스터디 그룹에서 차단되어 재가입할 수 없습니다."),
+    REGION_MISMATCH(HttpStatus.FORBIDDEN,"해당 스터디 그룹에 설정된 지역와 회원님이 설정한 지역이 일치하지 않습니다."),
+    ALREADY_ACTIVE_MEMBER(HttpStatus.BAD_REQUEST,"이미 활성 상태인 멤버입니다."),
+     ALREADY_REJECTED_MEMBER(HttpStatus.BAD_REQUEST,"이미 거절된 멤버입니다."),
+     ALREADY_PENDING_MEMBER(HttpStatus.BAD_REQUEST,"이미 대기 상태인 멤버입니다."),
+     CANNOT_CHANGE_REJECTED_MEMBER_STATUS(HttpStatus.FORBIDDEN,"거절된 멤버의 상태는 변경할 수 없습니다. 다시 참가 요청을 해주세요."),
+     INVALID_MEMBER_STATUS_TRANSITION(HttpStatus.FORBIDDEN,"유효하지 않은 멤버 상태 변경입니다."),
 
     // Chat 에러코드
     UNAUTHORIZED_STUDY_ROOM_CHAT(HttpStatus.FORBIDDEN, "해당 스터디방에 참여하지 않은 유저입니다."),

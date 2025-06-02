@@ -7,7 +7,7 @@ CREATE TABLE study_rooms (
     region VARCHAR(100),
     created_at DATETIME NOT NULL,
     host_user_id BIGINT NOT NULL,
-
+    host_name VARCHAR(100) NOT NULL,
     FOREIGN KEY (host_user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
