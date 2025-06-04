@@ -6,6 +6,7 @@ import com.example.meetty.global.exception.AppException;
 import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.global.util.PasswordUtil;
 import com.example.meetty.image.service.UserImageService;
+import com.example.meetty.image.uploader.GcpImageUploader;
 import com.example.meetty.myPage.dto.MyPageResponseDto;
 import com.example.meetty.myPage.dto.UpdatePasswordRequestDto;
 import com.example.meetty.myPage.dto.UpdateUserInfoRequestDto;
@@ -23,6 +24,7 @@ public class MyPageService {
     private final UserRepository userRepository;
     private final UserImageService userImageService;
     private final PasswordUtil passwordUtil;
+    private final GcpImageUploader gcpImageUploader;
 
     public MyPageResponseDto getMyPage(Long userId) {
         UserEntity userEntity = userRepository.findByUserId(userId).orElseThrow(
@@ -63,10 +65,27 @@ public class MyPageService {
             userEntity.setAddress(updateUserDto.getAddress());
         }
 
-        // 프로필 이미지 변경 처리
+        // 이미지 변경
+        String existingUrl = userEntity.getUserImageEntity() != null
+                ? userEntity.getUserImageEntity().getUrl()
+                : null;
+
         if (updateUserDto.isResetImage()) {
+            // 기존 이미지가 있고 기본 이미지가 아니라면 삭제
+            if (existingUrl != null && !existingUrl.contains("default.png")) {
+                gcpImageUploader.delete(existingUrl);
+            }
+
+            // 기본 이미지로 초기화
             userImageService.uploadUserImage(userEntity, null, true);
+
         } else if (profileImage != null && !profileImage.isEmpty()) {
+            // 기존 이미지가 있고 기본 이미지가 아니라면 삭제
+            if (existingUrl != null && !existingUrl.contains("default.png")) {
+                gcpImageUploader.delete(existingUrl);
+            }
+
+            // 새 이미지 업로드
             userImageService.uploadUserImage(userEntity, profileImage, false);
         }
 
