@@ -37,8 +37,8 @@ out/
 ### VS Code ###
 .vscode/
 
-### profile 이미지 파일
-#src/main/resources/static/uploads/profiles/
-
 ## logs 파일
 logs/
+
+## GCP storage 키
+/src/main/resources/GCP/gcp-service-key.json

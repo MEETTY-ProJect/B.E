@@ -5,23 +5,14 @@ import com.example.meetty.global.exception.AppException;
 import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.image.entity.UserImageEntity;
 import com.example.meetty.image.repository.UserImageRepository;
+import com.example.meetty.image.uploader.GcpImageUploader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -30,14 +21,15 @@ import java.util.UUID;
 public class UserImageService {
 
     private final UserImageRepository userImageRepository;
+    private final GcpImageUploader gcpImageUploader;
 
-    private static final String UPLOAD_DIR = "src/main/resources/static/uploads/profiles/";
-    private static final String DB_PATH_PREFIX = "/uploads/profiles/";
-    private static final String DEFAULT_IMAGE_PATH = DB_PATH_PREFIX + "default.png";
+    // GCS에 미리 업로드된 기본 이미지의 절대 URL
+    private static final String DEFAULT_IMAGE_URL = "https://storage.googleapis.com/meetty-img/default.png";
 
-    // 프로필 이미지 업로드 (MultipartFile 또는 기본 이미지 경로 자동 처리)
+    // 프로필 이미지 업로드 (파일 또는 기본 이미지)
     public String uploadUserImage(UserEntity userEntity, MultipartFile image, boolean isDefaultImage) {
         try {
+            // 이미지 없고 기본도 아닌 경우 → 기존 이미지 유지
             if (!isDefaultImage && (image == null || image.isEmpty())) {
                 log.info("이미지 변경 없음 → 기존 이미지 유지");
 
@@ -45,71 +37,51 @@ public class UserImageService {
                     return userEntity.getUserImageEntity().getUrl();
                 } else {
                     log.warn("기존 이미지 없음 → 기본 이미지 반환");
-                    return DEFAULT_IMAGE_PATH;
+                    return DEFAULT_IMAGE_URL;
                 }
             }
 
+            // 기존 이미지 삭제
             userImageRepository.deleteByUserEntity(userEntity);
 
-            String dbFilePath = isDefaultImage ? DEFAULT_IMAGE_PATH : saveImage(image, UPLOAD_DIR);
+            // GCP에 새 이미지 업로드
+            String imageUrl = isDefaultImage
+                    ? DEFAULT_IMAGE_URL
+                    : gcpImageUploader.upload(image);
 
-            UserImageEntity userImageEntity = new UserImageEntity(userEntity, dbFilePath);
+            // 새 이미지 정보 저장
+            UserImageEntity userImageEntity = new UserImageEntity(userEntity, imageUrl);
             userImageRepository.save(userImageEntity);
 
-            return dbFilePath;
+            return imageUrl;
 
         } catch (IOException e) {
-            log.error("이미지 저장 중 오류 발생", e);
+            log.error("이미지 업로드 중 오류 발생", e);
             throw new AppException(ErrorCode.IMAGE_UPLOAD_FAILED);
         }
     }
 
-    // 외부 URL에서 이미지 저장
+
+    // 외부 이미지 URL을 GCP에 업로드
     public String uploadUserImageFromUrl(UserEntity userEntity, String imageUrl) {
         try {
             userImageRepository.deleteByUserEntity(userEntity);
 
-            String dbFilePath = saveImageFromUrl(imageUrl, UPLOAD_DIR);
+            String uploadedUrl = gcpImageUploader.uploadFromUrl(imageUrl);
 
-            UserImageEntity userImageEntity = new UserImageEntity(userEntity, dbFilePath);
+            UserImageEntity userImageEntity = new UserImageEntity(userEntity, uploadedUrl);
             userImageRepository.save(userImageEntity);
 
-            return dbFilePath;
+            return uploadedUrl;
+
         } catch (IOException e) {
             log.error("외부 이미지 저장 중 오류 발생", e);
             throw new AppException(ErrorCode.IMAGE_UPLOAD_FAILED, "외부 이미지 업로드에 실패했습니다.");
         }
     }
 
-    // 기본 이미지 경로 반환
+    // 기본 이미지 URL 반환
     public String getDefaultImagePath() {
-        return DEFAULT_IMAGE_PATH;
-    }
-
-    // MultipartFile → 로컬 저장 후 DB 경로 반환
-    public String saveImage(MultipartFile image, String uploadsDir) throws IOException {
-        String fileName = UUID.randomUUID().toString().replace("-", "") + "_" + image.getOriginalFilename();
-        String filePath = uploadsDir + fileName;
-        String dbFilePath = "/uploads/profiles/" + fileName;
-
-        Path path = Paths.get(filePath);
-        Files.createDirectories(path.getParent());
-        Files.write(path, image.getBytes());
-
-        return dbFilePath;
-    }
-
-    // 외부 이미지 URL -> 로컬 파일 저장
-    private String saveImageFromUrl(String imageUrl, String uploadsDir) throws IOException {
-        String fileName = UUID.randomUUID().toString().replace("-", "") + ".jpg";
-        String filePath = uploadsDir + fileName;
-        String dbFilePath = DB_PATH_PREFIX + fileName;
-
-        try (InputStream inputStream = new URL(imageUrl).openStream()) {
-            Files.createDirectories(Paths.get(uploadsDir));
-            Files.copy(inputStream, Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
-        }
-
-        return dbFilePath;
+        return DEFAULT_IMAGE_URL;
     }
 }
