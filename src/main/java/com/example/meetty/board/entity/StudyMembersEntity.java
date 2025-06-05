@@ -21,6 +21,7 @@ public class StudyMembersEntity {
     @Column(name = "joined_at",nullable = false)
     private LocalDateTime joinedAt;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private MemberStatus status = MemberStatus.PENDING;
@@ -29,7 +30,7 @@ public class StudyMembersEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity member;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "room_id", nullable = false)
     private StudyRoomEntity studyRoom ;
 }

@@ -2,9 +2,11 @@ package com.example.meetty.board.repository;
 
 import com.example.meetty.board.entity.StudyPurpose;
 import com.example.meetty.board.entity.StudyRoomEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -48,4 +50,8 @@ public interface StudyRoomRepository extends JpaRepository<StudyRoomEntity,Long>
     // 스터디 그룹 ID로 상세 조회 시에도 host 정보 Fetch Join
     @Query("SELECT s FROM StudyRoomEntity s JOIN FETCH s.host WHERE s.roomId = :id")
     Optional<StudyRoomEntity> findByIdWithHost(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+     @Query("SELECT s FROM StudyRoomEntity s JOIN FETCH s.host WHERE s.roomId = :id")
+     Optional<StudyRoomEntity> findByIdWithHostAndLock(@Param("id") Long id);
 }

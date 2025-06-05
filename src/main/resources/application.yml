@@ -27,5 +27,15 @@ spring:
         import:
             - application-oauth2.yml
 
+    cloud:
+        gcp:
+            project-id: mystic-centaur-458406-v1
+            credentials:
+                location: classpath:GCP/gcp-service-key.json
+
+gcp:
+    storage:
+        bucket: meetty-img
+
 app:
     base-url: http://localhost:8080

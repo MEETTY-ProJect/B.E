@@ -41,6 +41,9 @@ public class StudyRoomEntity {
     @JoinColumn(name = "host_user_id",nullable = false)
     private UserEntity host;
 
+    @Column(name = "host_name", nullable = false)
+    private String hostName;
+
     public void updateInfo(String roomName, String introduction, StudyPurpose purpose) {
         this.roomName = roomName;
         this.introduction = introduction;
