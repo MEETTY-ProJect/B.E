@@ -14,3 +14,10 @@ spring:
 
   jwt:
     secure-cookie: true
+
+logging:
+  level:
+    root: WARN           # 전체 기본 로그 레벨을 WARN으로 줄임
+    org.springframework: WARN    # Spring 관련 로그도 최소화
+    org.hibernate.SQL: ERROR    # Hibernate SQL 로그 제거
+    com.example.meetty: INFO    # (선택) 내 코드만 INFO로 보고 싶을 때
