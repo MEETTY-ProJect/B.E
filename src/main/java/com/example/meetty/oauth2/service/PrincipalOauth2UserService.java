@@ -34,7 +34,7 @@ public class PrincipalOauth2UserService extends DefaultOAuth2UserService {
         OAuth2User oauth2User = super.loadUser(userRequest);
         OAuth2UserInfo oAuth2UserInfo = null;
 
-        String provider = userRequest.getClientRegistration().getRegistrationId(); // google, kakao 등
+        String provider = userRequest.getClientRegistration().getRegistrationId();
 
         if (provider.equals("google")) {
             oAuth2UserInfo = new GoogleUserInfo(oauth2User.getAttributes());
@@ -44,21 +44,24 @@ public class PrincipalOauth2UserService extends DefaultOAuth2UserService {
 
         log.info("OAuth2 User Attributes: {}", oauth2User.getAttributes());
 
+        String providerId = oAuth2UserInfo.getProviderId();
         String email = oAuth2UserInfo.getEmail();
-        if (email == null || email.isBlank()) {
-            email = provider + "_" + oAuth2UserInfo.getProviderId() + "@socialuser.com";
+
+        // ✅ 랜덤 이메일 생성 조건
+        if (email == null || userRepository.existsByEmail(email)) {
+            email = "oauth_" + UUID.randomUUID().toString().substring(0, 8) + "@oauthuser.com";
         }
 
-        Optional<UserEntity> existingUser = userRepository.findByEmail(email);
+        // ✅ provider + providerId 로 유저 조회 (OAuth2 기준)
+        Optional<UserEntity> existingUser = userRepository.findByProviderAndProviderId(provider, providerId);
         UserEntity oauthUser;
 
         if (existingUser.isPresent()) {
             oauthUser = existingUser.get();
         } else {
-            // 유저네임 중복 시 자동생성
+            // 유저네임 중복 방지
             String baseUsername = oAuth2UserInfo.getName();
             String finalUsername = baseUsername;
-
             if (userRepository.findByUsername(finalUsername).isPresent()) {
                 finalUsername = baseUsername + "_" + UUID.randomUUID().toString().substring(0, 8);
             }
@@ -68,26 +71,23 @@ public class PrincipalOauth2UserService extends DefaultOAuth2UserService {
                     .password("OAuth2")
                     .username(finalUsername)
                     .provider(provider)
-                    .providerId(oAuth2UserInfo.getProviderId())
+                    .providerId(providerId)
                     .role(UserRole.ROLE_USER)
                     .isVerified(true)
                     .createdAt(LocalDateTime.now())
                     .build();
 
             UserEntity savedUser = userRepository.save(oauthUser);
-
             UserEntity managedUser = userRepository.findByUserId(savedUser.getUserId())
                     .orElseThrow(() -> new RuntimeException("유저 저장 실패 후 조회 불가"));
 
             try {
                 String imageUrl = oAuth2UserInfo.getImage();
-
                 if (imageUrl == null || imageUrl.isBlank()) {
                     userImageService.uploadUserImage(managedUser, null, true);
                 } else {
                     userImageService.uploadUserImageFromUrl(managedUser, imageUrl);
                 }
-
             } catch (Exception e) {
                 log.error("프로필 이미지 저장 실패", e);
             }
