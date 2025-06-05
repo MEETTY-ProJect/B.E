@@ -1,6 +1,6 @@
 CREATE TABLE users(
     user_id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    email VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     username VARCHAR(20) UNIQUE NOT NULL,
     address VARCHAR(100),

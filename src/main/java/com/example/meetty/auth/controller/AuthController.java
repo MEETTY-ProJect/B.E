@@ -69,7 +69,7 @@ public class AuthController {
             SignUpDto signUpDto = objectMapper.readValue(dtoJson, SignUpDto.class);
             validationService.validate(signUpDto);
             userService.signUp(signUpDto, profileImage);
-            return ResponseEntity.ok(ApiResponse.success("회원가입 완료"));
+            return ResponseEntity.ok(ApiResponse.success("회원가입 요청 완료. 이메일 인증을 진행하세요."));
         } catch (JsonProcessingException e) {
             throw new AppException(ErrorCode.INVALID_JSON_FORMAT);
         }

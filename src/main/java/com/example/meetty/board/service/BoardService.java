@@ -12,6 +12,8 @@ import com.example.meetty.board.repository.StudyMembersRepository;
 import com.example.meetty.global.exception.AppException;
 import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.global.mail.service.EmailService;
+import com.example.meetty.notification.entity.NotificationType;
+import com.example.meetty.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -40,6 +42,7 @@ public class BoardService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final NotificationService notificationService;
 
     @Transactional
     public StudyRoomResponse createStudyGroup(CreateRoomRequest request,Long userId) {
@@ -220,6 +223,12 @@ public class BoardService {
 
         studyMembersRepository.save(pendingMember);
 
+        notificationService.notifyUser(
+                studyRoom.getHost().getUserId(),
+                NotificationType.STUDY_JOIN_REQUEST,
+                user.getUsername() + "님이 [" + studyRoom.getRoomName() + "] 스터디룸에 가입 요청을 보냈습니다.",
+                "/studyrooms/" + studyRoom.getRoomId()  // 프론트에서 알림 클릭 시 이동할 URL
+        );
     }
 
     @Transactional // DB 조회 등을 포함하므로 트랜잭션 유지. 이메일/Redis 실패 시 롤백 여부는 정책에 따라 달라질 수 있음.
@@ -324,6 +333,22 @@ public class BoardService {
                 if (currentActiveMemberCount >= studyRoom.getCapacity()) {
                     throw new AppException(ErrorCode.STUDY_GROUP_CAPACITY_FULL, ErrorCode.STUDY_GROUP_CAPACITY_FULL.getMessage());
                 }
+
+                // ✅ 승인 알림 전송
+                notificationService.notifyUser(
+                        memberToUpdate.getMember().getUserId(),
+                        NotificationType.STUDY_JOIN_APPROVED,
+                        "🎉 [" + studyRoom.getRoomName() + "] 참가 요청이 승인되었습니다.",
+                        "/studyrooms/" + roomId
+                );
+            } else if (newStatus == MemberStatus.REJECTED) {
+                // ✅ 거절 알림 전송
+                notificationService.notifyUser(
+                        memberToUpdate.getMember().getUserId(),
+                        NotificationType.STUDY_JOIN_REJECTED,
+                        "😥 [" + studyRoom.getRoomName() + "] 참가 요청이 거절되었습니다.",
+                        "/studyrooms/" + roomId
+                );
             }
             // PENDING -> Rejected는 이 로직 아래에서 처리 (거절)
         } else {
