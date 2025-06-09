@@ -37,5 +37,3 @@ gcp:
     storage:
         bucket: meetty-img
 
-app:
-    base-url: http://localhost:8080

@@ -12,8 +12,18 @@ spring:
     password: ${PROD_PASSWORD}
     driver-class-name: org.mariadb.jdbc.Driver
 
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
+
   jwt:
     secure-cookie: true
+
+app:
+  base-url: http://34.64.218.29:8080
 
 logging:
   level:
