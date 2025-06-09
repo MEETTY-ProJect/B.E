@@ -22,6 +22,9 @@ spring:
   jwt:
     secure-cookie: true
 
+app:
+  base-url: http://34.64.218.29:8080
+
 logging:
   level:
     root: WARN           # 전체 기본 로그 레벨을 WARN으로 줄임

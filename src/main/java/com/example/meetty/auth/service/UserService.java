@@ -84,6 +84,8 @@ public class UserService {
             uploadedImageUrl = userImageService.uploadUserImage(savedUser, profileImage, false);
         }
 
+        entityManager.refresh(savedUser);
+
         // 이메일로 인증링크 발송
         String token = UUID.randomUUID().toString();
         redisTemplate.opsForValue().set("emailToken:" + token, savedUser.getEmail(), Duration.ofMinutes(60));
@@ -136,7 +138,11 @@ public class UserService {
                 .email(userEntity.getEmail())
                 .username(userEntity.getUsername())
                 .address(userEntity.getAddress())
-                .profileImage(userEntity.getUserImageEntity().getUrl())
+                .profileImage(
+                        userEntity.getUserImageEntity() != null
+                                ? userEntity.getUserImageEntity().getUrl()
+                                : userImageService.getDefaultImagePath()
+                )
                 .role(userEntity.getRole().getType())
                 .build();
     }
