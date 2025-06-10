@@ -36,4 +36,7 @@ public interface StudyMembersRepository extends JpaRepository<StudyMembersEntity
     // 로그인된 회원이 속한 특정 스터디 룸의 정보 조회
     @Query("SELECT sm FROM StudyMembersEntity sm JOIN FETCH sm.studyRoom WHERE sm.member = :user AND sm.status = :status")
     List<StudyMembersEntity> findByMemberAndStatus(UserEntity user, MemberStatus status);
+
+    //특정 스터디그룹에 속한 사용자 정보를 가져오는 메서드
+    List<StudyMembersEntity> findByStudyRoom_RoomId(Long roomId);
 }

@@ -1,0 +1,41 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+actor User
+participant "React (Front)" as Front
+participant "ChatMessageController" as Controller
+participant "ChatMessageService" as Service
+participant "StudyMembersRepository" as MemberRepo
+participant "ChatMessageRepository" as MsgRepo
+database "MariaDB" as DB
+
+== [1] 채팅 메시지 저장 흐름 ==
+User -> Front : 채팅 입력
+Front -> Controller : POST /chat/rooms/{roomId}/messages\nAuthorization: Bearer token
+Controller -> Service : saveMessage(roomId, userId, message)
+Service -> MemberRepo : existsByStudyRoom_RoomIdAndMember_UserId(roomId, userId)
+MemberRepo -> DB : SELECT EXISTS(...)
+DB --> MemberRepo : true / false
+
+alt 참여자일 경우
+    Service -> MsgRepo : save(ChatMessage)
+    MsgRepo -> DB : INSERT INTO chat_messages ...
+    MsgRepo --> Service : 저장 완료
+    Service --> Controller : 응답 완료
+    Controller --> Front : 200 OK
+else 참여자 아님
+    Service -> Controller : throw AppException(FORBIDDEN_CHAT)
+    Controller --> Front : 403 Forbidden
+end
+
+== [2] 채팅 메시지 조회 흐름 ==
+User -> Front : 채팅방 입장 or 스크롤
+Front -> Controller : GET /chat/rooms/{roomId}/messages\n?lastMessageId&limit
+Controller -> Service : getMessages(roomId, lastMessageId, limit)
+Service -> MsgRepo : findMessagesByRoomId(...)
+MsgRepo -> DB : SELECT * FROM chat_messages\nWHERE room_id = ? AND message_id < ?\nORDER BY message_id DESC LIMIT ?
+DB --> MsgRepo : List<ChatMessage>
+MsgRepo --> Service : List<ChatMessageResponseDto>
+Service --> Controller : List<ChatMessageResponseDto>
+Controller --> Front : 200 OK + JSON
+@enduml

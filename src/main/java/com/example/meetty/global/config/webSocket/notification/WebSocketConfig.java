@@ -1,4 +1,4 @@
-package com.example.meetty.global.config.webSocket;
+package com.example.meetty.global.config.webSocket.notification;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
