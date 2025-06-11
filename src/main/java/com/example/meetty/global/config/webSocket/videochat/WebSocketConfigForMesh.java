@@ -14,7 +14,7 @@ public class WebSocketConfigForMesh implements WebSocketConfigurer {
 
     private final MeshSignalingHandler meshSignalingHandler;
 
-    //실시간 시그널링 설정
+    //실시간 시그널링 설정-mesh용
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(meshSignalingHandler, "/videochat1")
