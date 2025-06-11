@@ -94,6 +94,11 @@ public class UserService {
             emailService.sendVerificationLink(savedUser.getEmail(), token);
         } catch (Exception e) {
             log.error("❌ 이메일 전송 실패 - 회원가입 롤백: {}", savedUser.getEmail());
+
+            userImageService.deleteByUser(savedUser);
+            userRepository.delete(savedUser);
+            redisTemplate.delete("emailToken:" + token);
+
             throw new AppException(ErrorCode.EMAIL_SEND_FAIL);
         }
 

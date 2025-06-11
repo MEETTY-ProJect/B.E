@@ -44,6 +44,7 @@ public class UserEntity {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
+    @Builder.Default
     @Column(name = "is_verified", nullable = false)
     private boolean isVerified = false;
 
@@ -53,9 +54,11 @@ public class UserEntity {
     @OneToOne(mappedBy = "userEntity", fetch = FetchType.LAZY)
     private UserImageEntity userImageEntity;
 
+    @Builder.Default
     @OneToMany(mappedBy = "sender")
     private List<ChatMessage> chatMessages = new ArrayList<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "receiver", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<NotificationEntity> notifications = new ArrayList<>();
 }

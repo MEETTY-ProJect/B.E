@@ -84,4 +84,10 @@ public class UserImageService {
     public String getDefaultImagePath() {
         return DEFAULT_IMAGE_URL;
     }
+
+    // 유저의 프로필 이미지 삭제
+    public void deleteByUser(UserEntity userEntity) {
+        userImageRepository.deleteByUserEntity(userEntity);
+        log.info("🗑️ 유저({})의 프로필 이미지 삭제 완료", userEntity.getEmail());
+    }
 }
