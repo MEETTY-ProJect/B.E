@@ -30,12 +30,14 @@ public class ChatMessageController {
         return ApiResponse.success(messages);
     }
 
-    @Operation(summary = "채팅쓰기" , description = "채팅을 서버에 저장하는 API")
-    @PostMapping("/{roomId}/messages")
-    public ApiResponse<Void> saveMessage(@PathVariable Long roomId,
-                                            @RequestBody ChatMessageRequestDto request,
-                                            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        chatMessageService.saveMessage(roomId,userDetails.getUserId(), request.getMessage());
-        return ApiResponse.success(null);
-    }
+
+    //실시간 채팅으로 대체함.
+//    @Operation(summary = "채팅쓰기" , description = "채팅을 서버에 저장하는 API")
+//    @PostMapping("/{roomId}/messages")
+//    public ApiResponse<Void> saveMessage(@PathVariable Long roomId,
+//                                            @RequestBody ChatMessageRequestDto request,
+//                                            @AuthenticationPrincipal CustomUserDetails userDetails) {
+//        chatMessageService.saveMessage(roomId,userDetails.getUserId(), request);
+//        return ApiResponse.success(null);
+//    }
 }

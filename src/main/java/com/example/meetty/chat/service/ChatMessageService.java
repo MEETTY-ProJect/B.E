@@ -5,6 +5,7 @@ import com.example.meetty.auth.entity.UserEntity;
 import com.example.meetty.board.entity.StudyRoomEntity;
 import com.example.meetty.board.repository.StudyMembersRepository;
 import com.example.meetty.board.repository.StudyRoomRepository;
+import com.example.meetty.chat.dto.ChatMessageRequestDto;
 import com.example.meetty.chat.dto.ChatMessageResponseDto;
 import com.example.meetty.chat.entity.ChatMessage;
 import com.example.meetty.chat.repository.ChatMessageRepository;
@@ -31,7 +32,9 @@ public class ChatMessageService {
     }
 
     @Transactional
-    public void saveMessage(Long roomId, Long userId, String message) {
+    public ChatMessageResponseDto saveMessage(Long roomId, Long userId, ChatMessageRequestDto dto) {
+
+
         //참여자 검증
         boolean isMember = studyMembersRepository.existsByStudyRoom_RoomIdAndMember_UserId(roomId,userId);
         if (!isMember) {
@@ -39,18 +42,21 @@ public class ChatMessageService {
         }
 
 
-        //메시지 저장1
+        //메시지 저장
         UserEntity user = UserEntity.builder().userId(userId).build();
         StudyRoomEntity room = StudyRoomEntity.builder().roomId(roomId).build();
 
         ChatMessage chatMessage = ChatMessage.builder()
                 .sender(user)
                 .room(room)
-                .message(message)
+                .message(dto.getMessage())
                 .createdAt(LocalDateTime.now())
                 .build();
 
+        //저장  + 응답 변환
         chatMessageRepository.save(chatMessage);
+
+        return new ChatMessageResponseDto(chatMessage);
 
     }
 
