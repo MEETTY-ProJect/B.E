@@ -12,6 +12,7 @@ import com.example.meetty.board.repository.StudyMembersRepository;
 import com.example.meetty.global.exception.AppException;
 import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.global.mail.service.EmailService;
+import com.example.meetty.image.uploader.GcpImageUploader;
 import com.example.meetty.notification.entity.NotificationType;
 import com.example.meetty.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +34,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @Slf4j
@@ -41,14 +44,29 @@ public class BoardService {
     private final StudyMembersRepository studyMembersRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final GcpImageUploader gcpImageUploader;
     private final RedisTemplate<String, String> redisTemplate;
     private final NotificationService notificationService;
 
     @Transactional
-    public StudyRoomResponse createStudyGroup(CreateRoomRequest request,Long userId) {
+    public StudyRoomResponse createStudyGroup(CreateRoomRequest request, MultipartFile imageFile, Long userId) {
 
         UserEntity currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND,ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
+
+        String imageUrl = "https://storage.googleapis.com/meetty-img/default_room.png";
+
+        if (imageFile != null && !imageFile.isEmpty()) {
+            try {
+                imageUrl = gcpImageUploader.upload(imageFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new AppException(ErrorCode.FILE_UPLOAD_FAILED, ErrorCode.FILE_UPLOAD_FAILED.getMessage());
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new AppException(ErrorCode.GCP_ERROR, ErrorCode.GCP_ERROR.getMessage());
+            }
+        }
 
         StudyRoomEntity studyGroup = StudyRoomEntity.builder()
                 .roomName(request.getRoomName())
@@ -59,6 +77,7 @@ public class BoardService {
                 .host(currentUser)
                 .hostName(currentUser.getUsername())
                 .createdAt(LocalDateTime.now())
+                .imageUrl(imageUrl)
                 .build();
 
         StudyRoomEntity savedStudyGroup = studyRoomRepository.save(studyGroup);
@@ -73,7 +92,7 @@ public class BoardService {
         studyMembersRepository.save(hostMember);
 
         int currentMemberCount = 1;
-        return new StudyRoomResponse(savedStudyGroup, currentMemberCount);
+        return new StudyRoomResponse(savedStudyGroup, currentMemberCount,savedStudyGroup.getImageUrl());
     }
 
     public StudyRoomResponse getStudyGroupById(Long id) {
@@ -82,7 +101,7 @@ public class BoardService {
 
         int currentMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(studyGroup.getRoomId(), MemberStatus.ACTIVE);
 
-        return new StudyRoomResponse(studyGroup, currentMemberCount);
+        return new StudyRoomResponse(studyGroup, currentMemberCount,studyGroup.getImageUrl());
     }
 
     @Transactional(readOnly = true)
@@ -121,7 +140,7 @@ public class BoardService {
 
         // 만약 현재 페이지에 스터디 룸이 없다면 (빈 페이지), 카운트 쿼리를 실행할 필요가 없습니다.
         if (roomIds.isEmpty()) {
-            return new StudyRoomListResponse(studyGroupPage.map(studyGroup ->
+            return new StudyRoomListResponse<>(studyGroupPage.map(studyGroup ->
                     new StudyRoomListCardResponse(studyGroup, 0)
             ));
         }
@@ -139,12 +158,12 @@ public class BoardService {
             return new StudyRoomListCardResponse(studyGroup, currentMemberCount);
         });
 
-        return new StudyRoomListResponse(responsePage);
+        return new StudyRoomListResponse<>(responsePage);
     }
 
 
     @Transactional
-    public StudyRoomResponse updateStudyGroup(Long id, UpdateStudyRoomRequest request,Long userId) {
+    public StudyRoomResponse updateStudyGroup(Long id, UpdateStudyRoomRequest request, MultipartFile imageFile, Long userId) {
         StudyRoomEntity studyGroup = studyRoomRepository.findByIdWithHost(id)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND,ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
 
@@ -154,9 +173,24 @@ public class BoardService {
 
         studyGroup.updateInfo(request.getName(), request.getIntroduction(), request.getPurpose());
 
+        if (imageFile != null && !imageFile.isEmpty()) {
+            try {
+                gcpImageUploader.delete(studyGroup.getImageUrl());
+
+                String newImageUrl = gcpImageUploader.upload(imageFile);
+                studyGroup.setImageUrl(newImageUrl);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new AppException(ErrorCode.FILE_UPLOAD_FAILED, ErrorCode.FILE_UPLOAD_FAILED.getMessage());
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new AppException(ErrorCode.GCP_ERROR, ErrorCode.GCP_ERROR.getMessage());
+            }
+        }
+
         int currentMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(studyGroup.getRoomId(), MemberStatus.ACTIVE);
 
-        return new StudyRoomResponse(studyGroup, currentMemberCount);
+        return new StudyRoomResponse(studyGroup, currentMemberCount,studyGroup.getImageUrl());
     }
 
     @Transactional
@@ -173,6 +207,17 @@ public class BoardService {
 
         if (totalActiveMemberCount > 1) {
             throw new AppException(ErrorCode.STUDY_GROUP_DELETE_FAILED_HAS_MEMBERS, ErrorCode.STUDY_GROUP_DELETE_FAILED_HAS_MEMBERS.getMessage());
+        }
+
+        String imageUrl = studyGroup.getImageUrl();
+
+        if (imageUrl != null && !imageUrl.isEmpty() && !imageUrl.contains("default_room.png")) {
+            try {
+                gcpImageUploader.delete(imageUrl);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new AppException(ErrorCode.GCP_ERROR, "스터디 룸 이미지 삭제에 실패했습니다.");
+            }
         }
 
         studyRoomRepository.delete(studyGroup);
@@ -231,7 +276,7 @@ public class BoardService {
         );
     }
 
-    @Transactional // DB 조회 등을 포함하므로 트랜잭션 유지. 이메일/Redis 실패 시 롤백 여부는 정책에 따라 달라질 수 있음.
+    @Transactional
     public void inviteStudyGroupMember(Long roomId, String targetUserNickname, Long hostUserId) {
         StudyRoomEntity studyRoom = studyRoomRepository.findByIdWithHost(roomId)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND, ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
@@ -359,7 +404,7 @@ public class BoardService {
         memberToUpdate.setStatus(newStatus);
     }
 
-    public List<StudyRoomListCardResponse> getMyStudyRooms(Long hostUserId) {
+    public List<MyStudyRoomListCardResponse> getMyStudyRooms(Long hostUserId) {
         UserEntity currentUser = userRepository.findById(hostUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND,ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
 
@@ -369,25 +414,28 @@ public class BoardService {
             return Collections.emptyList();
         }
 
-        List<Long> roomIds = activeMemberships.stream()
-                .map(membership -> membership.getStudyRoom().getRoomId())
-                .collect(Collectors.toList());
-
-        List<Object[]> memberCounts = studyMembersRepository.countActiveMembersByRoomIds(roomIds, MemberStatus.ACTIVE);
-
-        Map<Long, Integer> memberCountMap = memberCounts.stream()
-                .collect(Collectors.toMap(
-                        row -> (Long) row[0],
-                        row -> ((Long) row[1]).intValue()
-                ));
-        List<StudyRoomListCardResponse> studyRoomList = activeMemberships.stream()
+        List<MyStudyRoomListCardResponse> studyRoomList = activeMemberships.stream()
                 .map(membership -> {
                     StudyRoomEntity studyRoom = membership.getStudyRoom();
-                    int currentMemberCount = memberCountMap.getOrDefault(studyRoom.getRoomId(), 0);
-                    return new StudyRoomListCardResponse(studyRoom, currentMemberCount);
+                    // 새로운 생성자를 사용하여 DTO 객체 생성
+                    return new MyStudyRoomListCardResponse(studyRoom, hostUserId);
                 })
                 .collect(Collectors.toList());
+
         return studyRoomList;
+    }
+
+    public StudyRoomResponse getStudyRoom(Long id,Long userId) {
+        StudyRoomEntity studyGroup = studyRoomRepository.findByIdWithHost(id)
+                .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND, ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
+
+        if (!isStudyGroupMember(studyGroup.getRoomId(), userId)) {
+            throw new AppException(ErrorCode.NOT_A_STUDY_ROOM_MEMBER, ErrorCode.NOT_A_STUDY_ROOM_MEMBER.getMessage());
+        }
+
+        int currentMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(studyGroup.getRoomId(), MemberStatus.ACTIVE);
+
+        return new StudyRoomResponse(studyGroup, currentMemberCount, studyGroup.getImageUrl());
     }
 
      @Transactional(readOnly = true)

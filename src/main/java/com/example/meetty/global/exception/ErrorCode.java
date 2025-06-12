@@ -38,7 +38,10 @@ public enum ErrorCode {
     STUDY_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 스터디 그룹을 찾을 수 없습니다."),
     UNAUTHORIZED_STUDY_GROUP_ACCESS(HttpStatus.FORBIDDEN, "스터디 그룹에 대한 권한이 없습니다."),
     STUDY_GROUP_DELETE_FAILED_HAS_MEMBERS(HttpStatus.BAD_REQUEST, "스터디 그룹에 참여 중인 다른 멤버가 있어 삭제할 수 없습니다."),
+    FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST,"이미지 파일 업로드에 실패했습니다."),
+    GCP_ERROR(HttpStatus.NOT_FOUND,"GCP 스토리지 작업 중 오류가 발생했습니다."),
     // 스터디 그룹 참가/초대 관련 에러 (새로 추가)
+    NOT_A_STUDY_ROOM_MEMBER(HttpStatus.BAD_REQUEST,"해당 스터디 룸의 멤버가 아니거나 활성 상태가 아닙니다."),
     ALREADY_STUDY_GROUP_MEMBER(HttpStatus.CONFLICT, "이미 스터티 그룹 멤버입니다."),
     STUDY_GROUP_CAPACITY_FULL(HttpStatus.CONFLICT, "스터디 그룹 인원이 가득 찼습니다."),
     STUDY_GROUP_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 스터디 그룹 멤버를 찾을 수 없습니다."),
