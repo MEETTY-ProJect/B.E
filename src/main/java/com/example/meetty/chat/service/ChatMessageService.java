@@ -2,6 +2,7 @@ package com.example.meetty.chat.service;
 
 
 import com.example.meetty.auth.entity.UserEntity;
+import com.example.meetty.auth.repository.UserRepository;
 import com.example.meetty.board.entity.StudyRoomEntity;
 import com.example.meetty.board.repository.StudyMembersRepository;
 import com.example.meetty.board.repository.StudyRoomRepository;
@@ -25,27 +26,45 @@ public class ChatMessageService {
 
     private final ChatMessageRepository chatMessageRepository;
     private final StudyMembersRepository studyMembersRepository;
+    private final StudyRoomRepository studyRoomRepository;
+    private final UserRepository userRepository;
+
 
     //채팅 조회
-    public List<ChatMessageResponseDto> getChatMessages(Long roomId, Long lastMessageId, int limit) {
+    public List<ChatMessageResponseDto> getChatMessages(Long roomId,Long userId, Long lastMessageId, int limit) {
+
+        //스터디 그룹 존재 여부 검증
+        if (!studyRoomRepository.existsById(roomId)) {
+            throw new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND);
+        }
+
+        //스터디 그룹 멤버 여부 검증
+        if (!studyMembersRepository.existsByStudyRoom_RoomIdAndMember_UserId(roomId, userId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED_STUDY_GROUP_ACCESS);
+        }
+
+
         return chatMessageRepository.findMessagesByRoomId(roomId, lastMessageId, limit);
     }
 
     @Transactional
     public ChatMessageResponseDto saveMessage(Long roomId, Long userId, ChatMessageRequestDto dto) {
 
-
         //참여자 검증
         boolean isMember = studyMembersRepository.existsByStudyRoom_RoomIdAndMember_UserId(roomId,userId);
+
         if (!isMember) {
-            throw new AppException(ErrorCode.UNAUTHORIZED_STUDY_ROOM_CHAT, ErrorCode.UNAUTHORIZED_STUDY_ROOM_CHAT.getMessage());
+            throw new AppException(ErrorCode.UNAUTHORIZED_STUDY_ROOM_CHAT);
         }
 
 
-        //메시지 저장
-        UserEntity user = UserEntity.builder().userId(userId).build();
-        StudyRoomEntity room = StudyRoomEntity.builder().roomId(roomId).build();
+        /** 메시지저장 **/
+        // 유저 조회 (UserEntity 전체 가져오기)
+        UserEntity user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        // 스터디룸 조회 (StudyRoomEntity 전체 가져오기)
+        StudyRoomEntity room = studyRoomRepository.findById(roomId).orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND));
 
+        // 메시지 생성 및 저장
         ChatMessage chatMessage = ChatMessage.builder()
                 .sender(user)
                 .room(room)
@@ -54,9 +73,10 @@ public class ChatMessageService {
                 .build();
 
         //저장  + 응답 변환
-        chatMessageRepository.save(chatMessage);
+        ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
-        return new ChatMessageResponseDto(chatMessage);
+        // 저장된 메시지를 ResponseDto로 변환
+        return new ChatMessageResponseDto(savedMessage);
 
     }
 

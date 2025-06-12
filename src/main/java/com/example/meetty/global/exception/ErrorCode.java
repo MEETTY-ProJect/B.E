@@ -56,6 +56,7 @@ public enum ErrorCode {
 
     // Chat 에러코드
     UNAUTHORIZED_STUDY_ROOM_CHAT(HttpStatus.FORBIDDEN, "해당 스터디방에 참여하지 않은 유저입니다."),
+    NOT_FOUND_MESSAGE(HttpStatus.NOT_FOUND, "메시지를 찾을수 없습니다."),
 
     // Notification 에러코드
     NOT_FOUND_NOTIFICATION(HttpStatus.NOT_FOUND, "해당 알림을 찾을 수 없습니다.")

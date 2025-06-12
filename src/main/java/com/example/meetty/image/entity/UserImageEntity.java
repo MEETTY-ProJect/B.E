@@ -12,6 +12,7 @@ import lombok.*;
 @Entity
 @Table(name = "user_images")
 public class UserImageEntity {
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "image_id")
     private Long userImageId;

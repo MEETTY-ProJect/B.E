@@ -12,21 +12,22 @@ spring:
       port: 6379
 
   datasource:
-    url: jdbc:mysql://localhost:3306/meetty_db
-    username: ${LOCAL_USERNAME}
-    password: ${LOCAL_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mariadb://34.64.218.29:3306/meetty_db
+    username: ${PROD_USERNAME}
+    password: ${PROD_PASSWORD}
+    driver-class-name: org.mariadb.jdbc.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
+        dialect: org.hibernate.dialect.MariaDBDialect
 
   jwt:
-    secure-cookie: false
+    secure-cookie: true
 
 app:
   base-url: http://localhost:8080
+
 
