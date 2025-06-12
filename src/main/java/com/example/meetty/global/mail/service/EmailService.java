@@ -84,20 +84,3 @@ public class EmailService {
             // helper.addInline("imageId", image);
     */
 }
-
-
-/*  SimpleMailMessage의 경우 단순 테스트만 가능
-        String invitationLink = baseUrl + "/study/invite/accept?token=" + invitationToken;
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
-        message.setSubject(subject);
-
-        // String finalBody = body.replace("{invitationLink}", invitationLink);
-
-        String finalBody = body + "\n\n초대 수락 링크: " + invitationLink;
-
-        message.setText(finalBody);
-        javaMailSender.send(message);
-        log.info("스터디 초대 메일 발송: 받는 사람={}, 제목={}", to, subject);
-    */

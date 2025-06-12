@@ -39,4 +39,6 @@ public interface StudyMembersRepository extends JpaRepository<StudyMembersEntity
 
     //특정 스터디그룹에 속한 사용자 정보를 가져오는 메서드
     List<StudyMembersEntity> findByStudyRoom_RoomId(Long roomId);
+
+    void deleteAllByMember(UserEntity userEntity);
 }

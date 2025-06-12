@@ -7,6 +7,9 @@ import com.example.meetty.auth.dto.SignUpDto;
 import com.example.meetty.auth.entity.UserEntity;
 import com.example.meetty.auth.entity.UserRole;
 import com.example.meetty.auth.repository.UserRepository;
+import com.example.meetty.board.repository.StudyMembersRepository;
+import com.example.meetty.board.repository.StudyRoomRepository;
+import com.example.meetty.chat.repository.ChatMessageRepository;
 import com.example.meetty.global.exception.AppException;
 import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.global.jwt.JwtTokenProvider;
@@ -14,6 +17,7 @@ import com.example.meetty.global.mail.service.EmailService;
 import com.example.meetty.global.util.PasswordUtil;
 import com.example.meetty.image.repository.UserImageRepository;
 import com.example.meetty.image.service.UserImageService;
+import com.example.meetty.notification.repository.NotificationRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.Cookie;
@@ -44,6 +48,10 @@ public class UserService {
     private final PasswordUtil passwordUtil;
     private final UserImageService userImageService;
     private final UserImageRepository userImageRepository;
+    private final StudyRoomRepository studyRoomRepository;
+    private final NotificationRepository notificationRepository;
+    private final StudyMembersRepository studyMembersRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final RedisTemplate<String, String> redisTemplate;
     private final EmailService emailService;
     private final JwtTokenProvider jwtTokenProvider;
@@ -239,8 +247,17 @@ public class UserService {
             throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
 
+        // 로그아웃 및 쿠키 제거
         logout(userEntity.getUserId(), httpServletResponse);
+
+        // 연관 데이터 삭제
         userImageRepository.deleteByUserEntity(userEntity);
+        notificationRepository.deleteAllByReceiver(userEntity);
+        studyMembersRepository.deleteAllByMember(userEntity);
+        chatMessageRepository.deleteAllBySender(userEntity);
+        studyRoomRepository.deleteByHost(userEntity);
+
+        // 유저 데이터 삭제
         userRepository.delete(userEntity);
 
         entityManager.flush();
