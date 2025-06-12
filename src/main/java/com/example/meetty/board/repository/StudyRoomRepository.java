@@ -1,5 +1,6 @@
 package com.example.meetty.board.repository;
 
+import com.example.meetty.auth.entity.UserEntity;
 import com.example.meetty.board.entity.StudyPurpose;
 import com.example.meetty.board.entity.StudyRoomEntity;
 import jakarta.persistence.LockModeType;
@@ -54,4 +55,6 @@ public interface StudyRoomRepository extends JpaRepository<StudyRoomEntity,Long>
     @Lock(LockModeType.PESSIMISTIC_WRITE)
      @Query("SELECT s FROM StudyRoomEntity s JOIN FETCH s.host WHERE s.roomId = :id")
      Optional<StudyRoomEntity> findByIdWithHostAndLock(@Param("id") Long id);
+
+    void deleteByHost(UserEntity userEntity);
 }
