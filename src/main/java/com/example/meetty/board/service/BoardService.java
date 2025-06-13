@@ -301,7 +301,7 @@ public class BoardService {
         String invitationToken = generateInvitationToken();
         String tokenKey = "study_invite:" + invitationToken;
         String tokenValue = roomId + ":" + targetUser.getUserId();
-        long expirationTime = 24;
+        long expirationTime = 1;
         TimeUnit expirationUnit = TimeUnit.HOURS;
 
         try {

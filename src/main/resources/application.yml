@@ -1,6 +1,9 @@
 server:
     port: 8080
 
+frontend:
+    study-room-detail-url: http://34.64.218.29/study-room
+
 spring:
     jwt:
         secret: ${JWT_SECRET}
