@@ -8,6 +8,8 @@ import com.example.meetty.global.config.auth.CustomUserDetails;
 import com.example.meetty.global.dto.ApiResponse;
 import com.example.meetty.global.exception.AppException;
 import com.example.meetty.global.exception.ErrorCode;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -18,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -28,13 +31,16 @@ import java.util.List;
 @Tag(name = "스터디 그룹 관련 API", description = "스터디 그룹 생성 및 조회 관련된 API")
 public class BoardController {
     private final BoardService boardService;
+    private final ObjectMapper objectMapper;
     @Operation(summary = "스터디 그룹 생성", description = "새로운 스터디 그룹을 생성합니다.")
     @PostMapping("/create")
     public ResponseEntity<ApiResponse<StudyRoomResponse>> createStudyGroup(
-            @Valid @RequestBody CreateRoomRequest request,
-            @AuthenticationPrincipal CustomUserDetails currentUser) {
+            @Valid @RequestPart(value = "request") String request,
+            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile,
+            @AuthenticationPrincipal CustomUserDetails currentUser) throws JsonProcessingException {
         Long userId = currentUser.getUserId();
-        StudyRoomResponse response = boardService.createStudyGroup(request, userId);
+        CreateRoomRequest createDto = objectMapper.readValue(request, CreateRoomRequest.class);
+        StudyRoomResponse response = boardService.createStudyGroup(createDto,imageFile,userId);
         ApiResponse<StudyRoomResponse> successResponse = ApiResponse.success(response);
         return ResponseEntity.status(HttpStatus.CREATED).body(successResponse);
     }
@@ -59,10 +65,12 @@ public class BoardController {
     @Operation(summary = "스터디 그룹 수정", description = "특정 ID의 스터디 그룹 정보를 수정합니다.")
     @PutMapping("/modify/{id}")
     public ResponseEntity<ApiResponse<StudyRoomResponse>> updateStudyGroup( @PathVariable Long id,
-                                               @Valid @RequestBody UpdateStudyRoomRequest request,
-                                               @AuthenticationPrincipal CustomUserDetails currentUser) {
+                                               @Valid @RequestPart(value = "request") String request,
+                                                @RequestPart(value = "imageFile", required = false) MultipartFile imageFile,
+                                               @AuthenticationPrincipal CustomUserDetails currentUser)throws JsonProcessingException {
             Long userId = currentUser.getUserId();
-            StudyRoomResponse response = boardService.updateStudyGroup(id, request,userId);
+        UpdateStudyRoomRequest updateDto = objectMapper.readValue(request, UpdateStudyRoomRequest.class);
+        StudyRoomResponse response = boardService.updateStudyGroup(id, updateDto, imageFile, userId);
             ApiResponse<StudyRoomResponse> successResponse = ApiResponse.success(response);
             return ResponseEntity.ok(successResponse);
     }
@@ -110,11 +118,19 @@ public class BoardController {
 
     @Operation(summary = "내가 속해 있는 스터디 룸 목록", description = "마이페이지에서 내가 속한 스터디 룸 목록을 확인합니다.")
     @GetMapping("/my")
-    public ResponseEntity<ApiResponse<List<StudyRoomListCardResponse>>> getMyStudyRooms(
+    public ResponseEntity<ApiResponse<List<MyStudyRoomListCardResponse>>> getMyStudyRooms(
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         Long hostUserId = currentUser.getUserId();
-        List<StudyRoomListCardResponse> response = boardService.getMyStudyRooms(hostUserId);
-        ApiResponse<List<StudyRoomListCardResponse>> successResponse = ApiResponse.success(response);
+        List<MyStudyRoomListCardResponse> response = boardService.getMyStudyRooms(hostUserId);
+        ApiResponse<List<MyStudyRoomListCardResponse>> successResponse = ApiResponse.success(response);
+        return ResponseEntity.ok(successResponse);
+    }
+    @Operation(summary = "입장하는 스터디 룸 정보 조회", description = "입장하는 스터디 그룹 상세 정보를 조회합니다.")
+    @GetMapping("/join/{id}")
+    public ResponseEntity<ApiResponse<StudyRoomResponse>> getStudyRoom(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails currentUser) {
+        Long currentUserId = currentUser.getUserId();
+        StudyRoomResponse response = boardService.getStudyRoom(id,currentUserId);
+        ApiResponse<StudyRoomResponse> successResponse = ApiResponse.success(response);
         return ResponseEntity.ok(successResponse);
     }
 }
