@@ -28,83 +28,64 @@ public class MyPageService {
 
     public MyPageResponseDto getMyPage(Long userId) {
         UserEntity userEntity = userRepository.findByUserId(userId).orElseThrow(
-                () -> new AppException(ErrorCode.USER_NOT_FOUND)
+                () -> new AppException(ErrorCode.USER_NOT_FOUND, ErrorCode.USER_NOT_FOUND.getMessage())
         );
-
-        String profileImageUrl = userEntity.getUserImageEntity().getUrl();
 
         return MyPageResponseDto.builder()
                 .email(userEntity.getEmail())
                 .username(userEntity.getUsername())
                 .address(userEntity.getAddress())
-                .profileImage(profileImageUrl)
+                .profileImage(userEntity.getUserImageEntity().getUrl())
                 .build();
     }
 
     @Transactional
     public MyPageResponseDto updateUserInfo(Long userId, UpdateUserInfoRequestDto updateUserDto, MultipartFile profileImage) {
         UserEntity userEntity = userRepository.findByUserId(userId).orElseThrow(
-                        () -> new AppException(ErrorCode.USER_NOT_FOUND)
+                () -> new AppException(ErrorCode.USER_NOT_FOUND, ErrorCode.USER_NOT_FOUND.getMessage())
         );
 
-        log.info("수정 전 username: {}", userEntity.getUsername());
-        log.info("수정 전 address: {}", userEntity.getAddress());
-        log.info("받은 dto.username: {}", updateUserDto.getUsername());
-        log.info("받은 dto.address: {}", updateUserDto.getAddress());
+        log.info("🔧 유저 정보 수정 시작 - userId: {}", userId);
 
+        // 닉네임 변경
         if (updateUserDto.getUsername() != null && !updateUserDto.getUsername().isBlank()) {
             if (!updateUserDto.getUsername().equals(userEntity.getUsername())
                     && userRepository.findByUsername(updateUserDto.getUsername()).isPresent()) {
-                throw new AppException(ErrorCode.USERNAME_DUPLICATED);
+                throw new AppException(ErrorCode.USERNAME_DUPLICATED, "이미 사용 중인 닉네임입니다.");
             }
+            log.info("✏️ 닉네임 변경: {} → {}", userEntity.getUsername(), updateUserDto.getUsername());
             userEntity.setUsername(updateUserDto.getUsername());
         }
 
-        // 주소 변경: 값이 있을 때만
+        // 주소 변경
         if (updateUserDto.getAddress() != null && !updateUserDto.getAddress().isBlank()) {
+            log.info("🏠 주소 변경: {} → {}", userEntity.getAddress(), updateUserDto.getAddress());
             userEntity.setAddress(updateUserDto.getAddress());
         }
 
-        // 이미지 변경
-        String existingUrl = userEntity.getUserImageEntity() != null
-                ? userEntity.getUserImageEntity().getUrl()
-                : null;
+        // 프로필 이미지 처리
+        String newImageUrl = null;
 
         if (updateUserDto.isResetImage()) {
-            // 기존 이미지가 있고 기본 이미지가 아니라면 삭제
-            if (existingUrl != null && !existingUrl.contains("default.png")) {
-                gcpImageUploader.delete(existingUrl);
-            }
-
-            // 기본 이미지로 초기화
-            userImageService.uploadUserImage(userEntity, null, true);
-
+            log.info("🖼️ 프로필 이미지 기본값으로 초기화 요청");
+            newImageUrl = userImageService.uploadUserImage(userEntity, null, true);
         } else if (profileImage != null && !profileImage.isEmpty()) {
-            // 기존 이미지가 있고 기본 이미지가 아니라면 삭제
-            if (existingUrl != null && !existingUrl.contains("default.png")) {
-                gcpImageUploader.delete(existingUrl);
-            }
-
-            // 새 이미지 업로드
-            userImageService.uploadUserImage(userEntity, profileImage, false);
+            log.info("📤 새 프로필 이미지 업로드 요청");
+            newImageUrl = userImageService.uploadUserImage(userEntity, profileImage, false);
+        } else {
+            log.info("✅ 프로필 이미지 변경 없음 → 기존 유지");
         }
 
-        log.info("요청 DTO - username: {}, address: {}, resetImage: {}",
-                updateUserDto.getUsername(),
-                updateUserDto.getAddress(),
-                updateUserDto.isResetImage());
-
-        log.info("수정 후 username: {}", userEntity.getUsername());
-        log.info("수정 후 address: {}", userEntity.getAddress());
-
-        // 응답용 이미지 URL
-        String imageUrl = userEntity.getUserImageEntity().getUrl();
+        // (선택) 트래킹 목적의 저장 호출
+        // userRepository.save(userEntity);
 
         return MyPageResponseDto.builder()
                 .email(userEntity.getEmail())
                 .username(userEntity.getUsername())
                 .address(userEntity.getAddress())
-                .profileImage(imageUrl)
+                .profileImage(newImageUrl != null
+                        ? newImageUrl
+                        : userEntity.getUserImageEntity().getUrl())
                 .build();
     }
 
