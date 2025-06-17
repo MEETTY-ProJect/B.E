@@ -17,6 +17,7 @@ import com.example.meetty.global.mail.service.EmailService;
 import com.example.meetty.global.util.PasswordUtil;
 import com.example.meetty.image.repository.UserImageRepository;
 import com.example.meetty.image.service.UserImageService;
+import com.example.meetty.image.uploader.GcpImageUploader;
 import com.example.meetty.notification.repository.NotificationRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -56,6 +57,7 @@ public class UserService {
     private final EmailService emailService;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRedisService refreshTokenRedisService;
+    private final GcpImageUploader gcpImageUploader;
     @Value("${spring.jwt.token.refresh-expiration-time}")
     private long refreshExpirationTime;
     @Value("${spring.jwt.secure-cookie}")
@@ -154,7 +156,7 @@ public class UserService {
                 .profileImage(
                         userEntity.getUserImageEntity() != null
                                 ? userEntity.getUserImageEntity().getUrl()
-                                : userImageService.getDefaultImagePath()
+                                : gcpImageUploader.getDefaultImageUrl()
                 )
                 .role(userEntity.getRole().getType())
                 .build();

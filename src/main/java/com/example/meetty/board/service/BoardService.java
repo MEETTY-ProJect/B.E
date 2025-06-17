@@ -59,9 +59,6 @@ public class BoardService {
         if (imageFile != null && !imageFile.isEmpty()) {
             try {
                 imageUrl = gcpImageUploader.upload(imageFile);
-            } catch (IOException e) {
-                e.printStackTrace();
-                throw new AppException(ErrorCode.FILE_UPLOAD_FAILED, ErrorCode.FILE_UPLOAD_FAILED.getMessage());
             } catch (Exception e) {
                 e.printStackTrace();
                 throw new AppException(ErrorCode.GCP_ERROR, ErrorCode.GCP_ERROR.getMessage());
@@ -179,9 +176,6 @@ public class BoardService {
 
                 String newImageUrl = gcpImageUploader.upload(imageFile);
                 studyGroup.setImageUrl(newImageUrl);
-            } catch (IOException e) {
-                e.printStackTrace();
-                throw new AppException(ErrorCode.FILE_UPLOAD_FAILED, ErrorCode.FILE_UPLOAD_FAILED.getMessage());
             } catch (Exception e) {
                 e.printStackTrace();
                 throw new AppException(ErrorCode.GCP_ERROR, ErrorCode.GCP_ERROR.getMessage());
