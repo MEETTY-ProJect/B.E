@@ -6,20 +6,17 @@ import lombok.Data;
 
 @AllArgsConstructor
 @Data
-public class StudyRoomListCardResponse {
+public class MyStudyRoomListCardResponse {
     private Long id;
     private String roomName;
     private String roomImage;
-    private int currentMemberCount;
-    private int maxMember;
-    private String hostNickname;
+    private String hostCheck;
 
-    public StudyRoomListCardResponse(StudyRoomEntity studyGroup, int currentMemberCount) {
+    public MyStudyRoomListCardResponse(StudyRoomEntity studyGroup, Long currentUserId) {
         this.id = studyGroup.getRoomId();
         this.roomName = studyGroup.getRoomName();
         this.roomImage = studyGroup.getImageUrl();
-        this.currentMemberCount = currentMemberCount;
-        this.maxMember = studyGroup.getCapacity();
-        this.hostNickname = studyGroup.getHost().getUsername();
+        this.hostCheck = (studyGroup.getHost().getUserId().equals(currentUserId)) ? "host" : "guest";
     }
+
 }

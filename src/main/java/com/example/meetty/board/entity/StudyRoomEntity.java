@@ -44,6 +44,9 @@ public class StudyRoomEntity {
     @Column(name = "host_name", nullable = false)
     private String hostName;
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
     public void updateInfo(String roomName, String introduction, StudyPurpose purpose) {
         this.roomName = roomName;
         this.introduction = introduction;

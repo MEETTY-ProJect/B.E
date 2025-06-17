@@ -18,9 +18,9 @@ public class StudyRoomResponse {
     private int currentMemberCount;
     private StudyPurpose purpose;
     private String region;
-    private String hostNickname;
+    private String imageUrl;
 
-    public StudyRoomResponse(StudyRoomEntity studyGroup, int currentMemberCount) {
+    public StudyRoomResponse(StudyRoomEntity studyGroup, int currentMemberCount, String imageUrl) {
         this.id = studyGroup.getRoomId();
         this.roomName = studyGroup.getRoomName();
         this.hostName = studyGroup.getHostName();
@@ -28,7 +28,7 @@ public class StudyRoomResponse {
         this.capacity = studyGroup.getCapacity();
         this.purpose = studyGroup.getPurpose();
         this.region = studyGroup.getRegion();
-        this.hostNickname = studyGroup.getHost().getUsername();
+        this.imageUrl = imageUrl;
         this.currentMemberCount = currentMemberCount;
     }
 }
