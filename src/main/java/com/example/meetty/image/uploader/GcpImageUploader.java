@@ -56,6 +56,12 @@ public class GcpImageUploader {
         }
     }
 
+    // ✅ 기존 이미지 삭제 후 새 이미지 업로드
+    public String uploadAndReplace(MultipartFile file, String oldImageUrl) {
+        delete(oldImageUrl); // 이전 이미지 삭제 시도
+        return upload(file);
+    }
+
     // ✅ 업로드: 외부 URL
     public String uploadFromUrl(String imageUrl) {
         try {

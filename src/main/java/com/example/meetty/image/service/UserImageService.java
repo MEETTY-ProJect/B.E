@@ -6,6 +6,8 @@ import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.image.entity.UserImageEntity;
 import com.example.meetty.image.repository.UserImageRepository;
 import com.example.meetty.image.uploader.GcpImageUploader;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,41 +24,36 @@ public class UserImageService {
 
     private final UserImageRepository userImageRepository;
     private final GcpImageUploader gcpImageUploader;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     // ✅ 프로필 이미지 업로드 (파일 또는 기본 이미지)
     public String uploadUserImage(UserEntity userEntity, MultipartFile image, boolean isDefaultImage) {
         try {
-            // 🔍 이미지 없는 경우 (변경 없음)
+            // 🔍 이미지 없는 경우
             if (!isDefaultImage && (image == null || image.isEmpty())) {
                 log.info("✅ 이미지 변경 없음 → 기존 이미지 유지");
-
                 UserImageEntity existingImage = userImageRepository.findByUserEntity(userEntity);
-                if (existingImage != null) {
-                    return existingImage.getUrl();
-                } else {
-                    log.warn("⚠️ 기존 이미지 없음 → 기본 이미지 사용");
-                    return gcpImageUploader.getDefaultImageUrl();
-                }
+                return existingImage != null ? existingImage.getUrl() : gcpImageUploader.getDefaultImageUrl();
             }
 
-            // ✅ 기존 이미지 삭제
-            userImageRepository.deleteByUserEntity(userEntity);
-            log.info("🗑️ 기존 이미지 삭제 완료");
+            // ✅ 기존 이미지 정보 조회 (DB에만)
+            UserImageEntity existingImage = userImageRepository.findByUserEntity(userEntity);
+            String oldUrl = existingImage != null ? existingImage.getUrl() : null;
 
-            // ✅ 이미지 업로드
+            // ✅ 이미지 업로드 및 GCP 자동 삭제 포함
             String imageUrl;
             if (isDefaultImage) {
                 imageUrl = gcpImageUploader.getDefaultImageUrl();
                 log.info("✅ 기본 이미지로 변경");
             } else {
-                log.info("📤 GCP 이미지 업로드 시작 - 파일명: {}, 크기: {}, 타입: {}",
-                        image.getOriginalFilename(),
-                        image.getSize(),
-                        image.getContentType());
-                imageUrl = gcpImageUploader.upload(image);
+                imageUrl = gcpImageUploader.uploadAndReplace(image, oldUrl);
             }
 
-            // ✅ 새 이미지 정보 저장
+            // ✅ DB 기존 이미지 삭제 및 새로 저장
+            userImageRepository.deleteByUserEntity(userEntity);
+            entityManager.flush();
+
             UserImageEntity userImageEntity = new UserImageEntity(userEntity, imageUrl);
             userImageRepository.save(userImageEntity);
             log.info("✅ 새 이미지 정보 DB 저장 완료: {}", imageUrl);
@@ -68,7 +65,6 @@ public class UserImageService {
             throw new AppException(ErrorCode.IMAGE_UPLOAD_FAILED);
         }
     }
-
 
     // 외부 이미지 URL을 GCP에 업로드
     public String uploadUserImageFromUrl(UserEntity userEntity, String imageUrl) {
