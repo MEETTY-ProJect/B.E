@@ -53,6 +53,7 @@ public class UserImageService {
             // ✅ DB 기존 이미지 삭제 및 새로 저장
             userImageRepository.deleteByUserEntity(userEntity);
             entityManager.flush();
+            entityManager.clear();
 
             UserImageEntity userImageEntity = new UserImageEntity(userEntity, imageUrl);
             userImageRepository.save(userImageEntity);
@@ -70,6 +71,8 @@ public class UserImageService {
     public String uploadUserImageFromUrl(UserEntity userEntity, String imageUrl) {
         try {
             userImageRepository.deleteByUserEntity(userEntity);
+            entityManager.flush();
+            entityManager.clear();
 
             String uploadedUrl = gcpImageUploader.uploadFromUrl(imageUrl);
 
