@@ -20,7 +20,7 @@ public class UserImageEntity {
     @Column(name = "url", nullable = false)
     private String url;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private UserEntity userEntity;
 
