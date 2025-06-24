@@ -6,6 +6,7 @@ import com.example.meetty.notification.entity.NotificationEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import javax.sql.RowSet;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,9 +52,6 @@ public class UserEntity {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @OneToOne(mappedBy = "userEntity", fetch = FetchType.EAGER)
-    private UserImageEntity userImageEntity;
-
     @Builder.Default
     @OneToMany(mappedBy = "sender")
     private List<ChatMessage> chatMessages = new ArrayList<>();
@@ -61,4 +59,5 @@ public class UserEntity {
     @Builder.Default
     @OneToMany(mappedBy = "receiver", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<NotificationEntity> notifications = new ArrayList<>();
+
 }

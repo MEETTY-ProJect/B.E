@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserImageRepository extends JpaRepository<UserImageEntity, Long> {
     void deleteByUserEntity(UserEntity userEntity);
+    UserImageEntity findByUserEntity(UserEntity userEntity);
 }

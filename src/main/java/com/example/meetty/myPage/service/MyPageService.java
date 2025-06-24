@@ -5,6 +5,8 @@ import com.example.meetty.auth.repository.UserRepository;
 import com.example.meetty.global.exception.AppException;
 import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.global.util.PasswordUtil;
+import com.example.meetty.image.entity.UserImageEntity;
+import com.example.meetty.image.repository.UserImageRepository;
 import com.example.meetty.image.service.UserImageService;
 import com.example.meetty.image.uploader.GcpImageUploader;
 import com.example.meetty.myPage.dto.MyPageResponseDto;
@@ -24,6 +26,7 @@ public class MyPageService {
     private final UserRepository userRepository;
     private final UserImageService userImageService;
     private final PasswordUtil passwordUtil;
+    private final UserImageRepository userImageRepository;
     private final GcpImageUploader gcpImageUploader;
 
     public MyPageResponseDto getMyPage(Long userId) {
@@ -31,11 +34,14 @@ public class MyPageService {
                 () -> new AppException(ErrorCode.USER_NOT_FOUND, ErrorCode.USER_NOT_FOUND.getMessage())
         );
 
+        UserImageEntity image = userImageRepository.findByUserEntity(userEntity);
+        String profileImageUrl = image != null ? image.getUrl() : gcpImageUploader.getDefaultImageUrl();
+
         return MyPageResponseDto.builder()
                 .email(userEntity.getEmail())
                 .username(userEntity.getUsername())
                 .address(userEntity.getAddress())
-                .profileImage(userEntity.getUserImageEntity().getUrl())
+                .profileImage(profileImageUrl)
                 .build();
     }
 
@@ -76,16 +82,17 @@ public class MyPageService {
             log.info("✅ 프로필 이미지 변경 없음 → 기존 유지");
         }
 
-        // (선택) 트래킹 목적의 저장 호출
-        // userRepository.save(userEntity);
+        // 기존 이미지 조회 방식 변경
+        if (newImageUrl == null) {
+            UserImageEntity image = userImageRepository.findByUserEntity(userEntity);
+            newImageUrl = image != null ? image.getUrl() : gcpImageUploader.getDefaultImageUrl();
+        }
 
         return MyPageResponseDto.builder()
                 .email(userEntity.getEmail())
                 .username(userEntity.getUsername())
                 .address(userEntity.getAddress())
-                .profileImage(newImageUrl != null
-                        ? newImageUrl
-                        : userEntity.getUserImageEntity().getUrl())
+                .profileImage(newImageUrl)
                 .build();
     }
 

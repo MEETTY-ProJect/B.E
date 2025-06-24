@@ -42,7 +42,7 @@ public class ChatMessageRepositoryImpl implements ChatMessageRepositoryCustom{
                         m.createdAt))
                 .from(m)
                 .join(m.sender,u)
-                .leftJoin(u.userImageEntity,img)
+                .leftJoin(img).on(img.userEntity.eq(u))
                 .where(
                         m.room.roomId.eq(roomId),
                         m.messageId.lt(cursor)

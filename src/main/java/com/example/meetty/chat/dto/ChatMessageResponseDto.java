@@ -28,19 +28,4 @@ public class ChatMessageResponseDto {
         this.message = message;
         this.createdAt = createdAt;
     }
-
-
-
-    public ChatMessageResponseDto(ChatMessage chatMessage) {
-        this.messageId = chatMessage.getMessageId();
-        this.roomId = chatMessage.getRoom().getRoomId();
-        this.userId = chatMessage.getSender().getUserId();
-        this.username = chatMessage.getSender().getUsername();
-        this.profileImage = chatMessage.getSender().getUserImageEntity().getUrl();
-        this.message = chatMessage.getMessage();
-        this.createdAt = chatMessage.getCreatedAt();
-    }
-
-
-
 }

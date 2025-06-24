@@ -7,6 +7,7 @@ import com.example.meetty.auth.service.RefreshTokenRedisService;
 import com.example.meetty.global.config.auth.CustomUserDetails;
 import com.example.meetty.global.jwt.JwtTokenProvider;
 import com.example.meetty.image.entity.UserImageEntity;
+import com.example.meetty.image.repository.UserImageRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -32,6 +33,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
     private final RefreshTokenRedisService refreshTokenRedisService;
+    private final UserImageRepository userImageRepository;
     @Value("${spring.jwt.token.refresh-expiration-time}")
     private long refreshExpirationTime;
 
@@ -63,9 +65,11 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         refreshCookie.setMaxAge(60 * 60 * 24 * 7); // 7일
         response.addCookie(refreshCookie);
 
-        // JSON 응답 작성
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
+
+
+        // 단방향 이미지 조회 방식으로 변경
+        UserImageEntity image = userImageRepository.findByUserEntity(userEntity);
+        String profileImageUrl = image != null ? image.getUrl() : "/uploads/profiles/base.png";
 
         Map<String, String> result = new HashMap<>();
         result.put("message", "로그인 되었습니다");
@@ -74,9 +78,11 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         result.put("refresh_token", refreshToken);
         result.put("email", email);
         result.put("username", userEntity.getUsername());
-        result.put("profileImage", Optional.ofNullable(userEntity.getUserImageEntity())
-                .map(UserImageEntity::getUrl)
-                .orElse("/uploads/profiles/base.png"));
+        result.put("profileImage", profileImageUrl);
+
+        // JSON 응답 작성
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
 
         ObjectMapper objectMapper = new ObjectMapper();
         response.getWriter().write(objectMapper.writeValueAsString(result));

@@ -15,6 +15,7 @@ import com.example.meetty.global.exception.ErrorCode;
 import com.example.meetty.global.jwt.JwtTokenProvider;
 import com.example.meetty.global.mail.service.EmailService;
 import com.example.meetty.global.util.PasswordUtil;
+import com.example.meetty.image.entity.UserImageEntity;
 import com.example.meetty.image.repository.UserImageRepository;
 import com.example.meetty.image.service.UserImageService;
 import com.example.meetty.image.uploader.GcpImageUploader;
@@ -148,17 +149,19 @@ public class UserService {
         log.info("✅ 로그인 성공 - 이메일: {}", userEntity.getEmail());
         log.info("🔑 AccessToken: {}", accessToken);
 
+        // ✅ 이미지 URL 조회 (UserImageRepository 사용)
+        UserImageEntity userImageEntity = userImageRepository.findByUserEntity(userEntity);
+        String profileImageUrl = userImageEntity != null
+                ? userImageEntity.getUrl()
+                : gcpImageUploader.getDefaultImageUrl();
+
         return LoginResponseDto.builder()
                 .accessToken(accessToken)
                 .email(userEntity.getEmail())
                 .username(userEntity.getUsername())
                 .address(userEntity.getAddress())
-                .profileImage(
-                        userEntity.getUserImageEntity() != null
-                                ? userEntity.getUserImageEntity().getUrl()
-                                : gcpImageUploader.getDefaultImageUrl()
-                )
-                .role(userEntity.getRole().getType())
+                .profileImage(profileImageUrl)
+                .role(role)
                 .build();
     }
 

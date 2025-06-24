@@ -12,6 +12,9 @@ import com.example.meetty.chat.entity.ChatMessage;
 import com.example.meetty.chat.repository.ChatMessageRepository;
 import com.example.meetty.global.exception.AppException;
 import com.example.meetty.global.exception.ErrorCode;
+import com.example.meetty.image.entity.UserImageEntity;
+import com.example.meetty.image.repository.UserImageRepository;
+import com.example.meetty.image.uploader.GcpImageUploader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +31,8 @@ public class ChatMessageService {
     private final StudyMembersRepository studyMembersRepository;
     private final StudyRoomRepository studyRoomRepository;
     private final UserRepository userRepository;
+    private final UserImageRepository userImageRepository;
+    private final GcpImageUploader gcpImageUploader;
 
 
     //채팅 조회
@@ -72,12 +77,23 @@ public class ChatMessageService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
+        // 프로필 이미지 단방향 조회 방식으로 수정
+        UserImageEntity image = userImageRepository.findByUserEntity(user);
+        String profileImage = image != null ? image.getUrl() : gcpImageUploader.getDefaultImageUrl();
+
         //저장  + 응답 변환
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
         // 저장된 메시지를 ResponseDto로 변환
-        return new ChatMessageResponseDto(savedMessage);
-
+        return new ChatMessageResponseDto(
+                savedMessage.getMessageId(),
+                room.getRoomId(),
+                user.getUserId(),
+                user.getUsername(),
+                profileImage,
+                savedMessage.getMessage(),
+                savedMessage.getCreatedAt()
+        );
     }
 
 

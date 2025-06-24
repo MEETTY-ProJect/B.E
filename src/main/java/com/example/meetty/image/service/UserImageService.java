@@ -23,31 +23,27 @@ public class UserImageService {
     private final UserImageRepository userImageRepository;
     private final GcpImageUploader gcpImageUploader;
 
-    // 프로필 이미지 업로드 (파일 또는 기본 이미지)
+    // ✅ 프로필 이미지 업로드 (파일 또는 기본 이미지)
     public String uploadUserImage(UserEntity userEntity, MultipartFile image, boolean isDefaultImage) {
         try {
             // 🔍 이미지 없는 경우 (변경 없음)
             if (!isDefaultImage && (image == null || image.isEmpty())) {
                 log.info("✅ 이미지 변경 없음 → 기존 이미지 유지");
 
-                if (userEntity.getUserImageEntity() != null) {
-                    return userEntity.getUserImageEntity().getUrl();
+                UserImageEntity existingImage = userImageRepository.findByUserEntity(userEntity);
+                if (existingImage != null) {
+                    return existingImage.getUrl();
                 } else {
                     log.warn("⚠️ 기존 이미지 없음 → 기본 이미지 사용");
                     return gcpImageUploader.getDefaultImageUrl();
                 }
             }
 
-            // 기존 이미지 삭제
+            // ✅ 기존 이미지 삭제
             userImageRepository.deleteByUserEntity(userEntity);
             log.info("🗑️ 기존 이미지 삭제 완료");
 
-//            // GCP에 새 이미지 업로드
-//            String imageUrl = isDefaultImage
-//                    ? DEFAULT_IMAGE_URL
-//                    : gcpImageUploader.upload(image);
-
-            // 이미지 업로드
+            // ✅ 이미지 업로드
             String imageUrl;
             if (isDefaultImage) {
                 imageUrl = gcpImageUploader.getDefaultImageUrl();
@@ -60,7 +56,7 @@ public class UserImageService {
                 imageUrl = gcpImageUploader.upload(image);
             }
 
-            // 새 이미지 정보 저장
+            // ✅ 새 이미지 정보 저장
             UserImageEntity userImageEntity = new UserImageEntity(userEntity, imageUrl);
             userImageRepository.save(userImageEntity);
             log.info("✅ 새 이미지 정보 DB 저장 완료: {}", imageUrl);
