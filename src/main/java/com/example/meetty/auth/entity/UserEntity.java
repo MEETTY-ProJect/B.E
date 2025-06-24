@@ -51,7 +51,7 @@ public class UserEntity {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @OneToOne(mappedBy = "userEntity", fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "userEntity", fetch = FetchType.EAGER)
     private UserImageEntity userImageEntity;
 
     @Builder.Default
