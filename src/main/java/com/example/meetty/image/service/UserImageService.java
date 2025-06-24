@@ -27,21 +27,21 @@ public class UserImageService {
     @PersistenceContext
     private EntityManager entityManager;
 
-    // ✅ 프로필 이미지 업로드 (파일 또는 기본 이미지)
+    // 프로필 이미지 업로드 (파일 또는 기본 이미지)
     public String uploadUserImage(UserEntity userEntity, MultipartFile image, boolean isDefaultImage) {
         try {
-            // 🔍 이미지 없는 경우
+            // 🔍 이미지 없는 경우 → 기존 이미지 유지
             if (!isDefaultImage && (image == null || image.isEmpty())) {
                 log.info("✅ 이미지 변경 없음 → 기존 이미지 유지");
                 UserImageEntity existingImage = userImageRepository.findByUserEntity(userEntity);
                 return existingImage != null ? existingImage.getUrl() : gcpImageUploader.getDefaultImageUrl();
             }
 
-            // ✅ 기존 이미지 정보 조회 (DB에만)
+            // ✅ 기존 이미지 정보 조회
             UserImageEntity existingImage = userImageRepository.findByUserEntity(userEntity);
             String oldUrl = existingImage != null ? existingImage.getUrl() : null;
 
-            // ✅ 이미지 업로드 및 GCP 자동 삭제 포함
+            // ✅ 이미지 업로드 및 GCP에서 기존 이미지 자동 삭제
             String imageUrl;
             if (isDefaultImage) {
                 imageUrl = gcpImageUploader.getDefaultImageUrl();
@@ -50,15 +50,17 @@ public class UserImageService {
                 imageUrl = gcpImageUploader.uploadAndReplace(image, oldUrl);
             }
 
-            // ✅ DB 기존 이미지 삭제 및 새로 저장
-            userImageRepository.deleteByUserEntity(userEntity);
-            entityManager.flush();
-            entityManager.clear();
+            // ✅ 기존 이미지 DB에서 삭제 → flush로 즉시 반영
+            if (existingImage != null) {
+                userImageRepository.delete(existingImage);
+                userImageRepository.flush();
+            }
 
+            // ✅ 새 이미지 DB 저장
             UserImageEntity userImageEntity = new UserImageEntity(userEntity, imageUrl);
             userImageRepository.save(userImageEntity);
-            log.info("✅ 새 이미지 정보 DB 저장 완료: {}", imageUrl);
 
+            log.info("✅ 새 이미지 정보 DB 저장 완료: {}", imageUrl);
             return imageUrl;
 
         } catch (Exception e) {
