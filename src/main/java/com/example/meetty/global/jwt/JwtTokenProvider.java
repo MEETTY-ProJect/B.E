@@ -3,6 +3,7 @@ package com.example.meetty.global.jwt;
 import com.example.meetty.global.config.auth.CustomUserDetailsServiceImpl;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.DecodingException;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,7 @@ import java.util.Date;
 @RequiredArgsConstructor
 @Component
 public class JwtTokenProvider {
+
     private final CustomUserDetailsServiceImpl customUserDetailsService;
 
     @Value("${spring.jwt.secret}")
