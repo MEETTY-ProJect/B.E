@@ -7,7 +7,7 @@ spring:
       on-profile: prod
 
   datasource:
-    url: jdbc:mariadb://34.64.218.29:3306/meetty_db
+    url: jdbc:mariadb://34.22.72.174:3306/meetty_db
     username: ${PROD_USERNAME}
     password: ${PROD_PASSWORD}
     driver-class-name: org.mariadb.jdbc.Driver

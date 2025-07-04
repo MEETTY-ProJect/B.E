@@ -218,7 +218,7 @@ public class BoardService {
     }
 // ----------------------------------------------------------------------------------------------------------------------
     @Transactional
-    public void requestJoinStudyGroup(Long roomId, Long userId) {
+    public Long requestJoinStudyGroup(Long roomId, Long userId) {
         StudyRoomEntity studyRoom = studyRoomRepository.findByIdWithHostAndLock(roomId)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDY_GROUP_NOT_FOUND, ErrorCode.STUDY_GROUP_NOT_FOUND.getMessage()));
 
@@ -268,6 +268,8 @@ public class BoardService {
                 user.getUsername() + "님이 [" + studyRoom.getRoomName() + "] 스터디룸에 가입 요청을 보냈습니다.",
                 "/studyrooms/" + studyRoom.getRoomId()  // 프론트에서 알림 클릭 시 이동할 URL
         );
+
+        return pendingMember.getMember().getUserId();
     }
 
     @Transactional
@@ -290,6 +292,14 @@ public class BoardService {
         int currentActiveMemberCount = studyMembersRepository.countByStudyRoomRoomIdAndStatus(roomId, MemberStatus.ACTIVE);
         if (currentActiveMemberCount >= studyRoom.getCapacity()) {
             throw new AppException(ErrorCode.STUDY_GROUP_CAPACITY_FULL, "스터디 그룹 인원이 가득 찼습니다. 더 이상 초대할 수 없습니다.");
+        }
+
+        String studyRoomRegion = studyRoom.getRegion();
+        String userRegion = targetUser.getAddress();
+
+        if (studyRoomRegion != null && !studyRoomRegion.isEmpty() &&
+                (userRegion != null && !studyRoomRegion.equals(userRegion))) {
+            throw new AppException(ErrorCode.REGION_MISMATCH, ErrorCode.REGION_MISMATCH.getMessage());
         }
 
         String invitationToken = generateInvitationToken();
@@ -372,7 +382,6 @@ public class BoardService {
                 if (currentActiveMemberCount >= studyRoom.getCapacity()) {
                     throw new AppException(ErrorCode.STUDY_GROUP_CAPACITY_FULL, ErrorCode.STUDY_GROUP_CAPACITY_FULL.getMessage());
                 }
-
                 // ✅ 승인 알림 전송
                 notificationService.notifyUser(
                         memberToUpdate.getMember().getUserId(),
@@ -389,12 +398,9 @@ public class BoardService {
                         "/studyrooms/" + roomId
                 );
             }
-            // PENDING -> Rejected는 이 로직 아래에서 처리 (거절)
         } else {
-            // 정의되지 않은 다른 상태값인 경우 처리
             throw new AppException(ErrorCode.INVALID_MEMBER_STATUS_TRANSITION, ErrorCode.INVALID_MEMBER_STATUS_TRANSITION.getMessage());
         }
-
         memberToUpdate.setStatus(newStatus);
     }
 
