@@ -2,7 +2,7 @@ server:
     port: 8080
 
 frontend:
-    study-room-detail-url: http://34.64.218.29/study-room
+    study-room-detail-url: http://34.22.72.174/study-room
 
 spring:
     jwt:

@@ -22,7 +22,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -85,12 +87,16 @@ public class BoardController {
 
     @Operation(summary = "스터디 그룹 참가 요청", description = "게스트 회원이 스터디 그룹에 참가를 요청합니다.")
     @PostMapping("/{roomId}/join")
-    public ResponseEntity<ApiResponse<String>> requestJoinStudyGroup(
+    public ResponseEntity<ApiResponse<Map<String,Object>>> requestJoinStudyGroup(
             @Valid @PathVariable Long roomId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         Long userId = currentUser.getUserId();
-        boardService.requestJoinStudyGroup(roomId, userId);
-        return ResponseEntity.ok(ApiResponse.success("스터디 그룹 참가 요청이 완료되었습니다."));
+        Long memberId = boardService.requestJoinStudyGroup(roomId, userId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "스터디 그룹 참가 요청이 완료되었습니다.");
+        response.put("memberId", memberId);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(summary = "스터디 그룹 참가 요청 승인/거절", description = "호스트가 게스트 회원의 참가 요청을 승인하거나 거절합니다. memberId는 StudyMembersEntity의 ID입니다.")
