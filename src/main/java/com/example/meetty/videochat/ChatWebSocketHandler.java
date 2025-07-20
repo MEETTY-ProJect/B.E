@@ -83,13 +83,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         Long roomId = (Long) session.getAttributes().get("roomId");
         Long userId = (Long) session.getAttributes().get("userId");
 
-        //수신된 메시지 역직렬화
+        //1.클라이언트에서 들어온 메시지를 파싱
         ChatMessageRequestDto requestDto = objectMapper.readValue(message.getPayload(), ChatMessageRequestDto.class);
 
-        //DB에 메시지 저장
+        //2.DB에 메시지 저장 + 응답 DTO 생성
         ChatMessageResponseDto savedMessage = chatMessageService.saveMessage(roomId,userId,requestDto);
 
-        //응답 직렬화
+        //3. WebSocket으로 모든 세션에 브로드 캐스트
         String sendMessage = objectMapper.writeValueAsString(savedMessage);
 
         for (WebSocketSession s : chatRooms.getOrDefault(roomId,Set.of())) {

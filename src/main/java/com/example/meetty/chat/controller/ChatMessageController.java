@@ -2,6 +2,7 @@ package com.example.meetty.chat.controller;
 
 import com.example.meetty.chat.dto.ChatMessageRequestDto;
 import com.example.meetty.chat.dto.ChatMessageResponseDto;
+import com.example.meetty.chat.dto.ChatRoomResponseDto;
 import com.example.meetty.chat.service.ChatMessageService;
 import com.example.meetty.global.config.auth.CustomUserDetails;
 import com.example.meetty.global.dto.ApiResponse;
@@ -23,11 +24,12 @@ public class ChatMessageController {
 
     @Operation(summary = "채팅조회" , description = "채팅을 리미트 수만큼 최근 목록 조회, 스크롤 조회 가능")
     @GetMapping("/{roomId}/messages")
-    public ApiResponse<List<ChatMessageResponseDto>> getMessages(@PathVariable Long roomId,
-                                                                 @RequestParam(required = false) Long lastMessageId,
-                                                                 @RequestParam(defaultValue = "30") int limit,
-                                                                 @AuthenticationPrincipal CustomUserDetails userDetails) {
-        List<ChatMessageResponseDto> messages = chatMessageService.getChatMessages(roomId,userDetails.getUserId(), lastMessageId, limit );
+    public ApiResponse<ChatRoomResponseDto> getMessages(@PathVariable Long roomId,
+                                                        @RequestParam(required = false) Long lastMessageId,
+                                                        @RequestParam(defaultValue = "30") int limit,
+                                                        @AuthenticationPrincipal CustomUserDetails userDetails) {
+        ChatRoomResponseDto messages = chatMessageService.getChatMessages(roomId,userDetails.getUserId(), lastMessageId, limit );
+
         return ApiResponse.success(messages);
     }
 

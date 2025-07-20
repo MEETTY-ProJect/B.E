@@ -3,11 +3,13 @@ package com.example.meetty.chat.service;
 
 import com.example.meetty.auth.entity.UserEntity;
 import com.example.meetty.auth.repository.UserRepository;
+import com.example.meetty.board.dto.StudyRoomMemberListResponseDto;
 import com.example.meetty.board.entity.StudyRoomEntity;
 import com.example.meetty.board.repository.StudyMembersRepository;
 import com.example.meetty.board.repository.StudyRoomRepository;
 import com.example.meetty.chat.dto.ChatMessageRequestDto;
 import com.example.meetty.chat.dto.ChatMessageResponseDto;
+import com.example.meetty.chat.dto.ChatRoomResponseDto;
 import com.example.meetty.chat.entity.ChatMessage;
 import com.example.meetty.chat.repository.ChatMessageRepository;
 import com.example.meetty.global.exception.AppException;
@@ -36,7 +38,7 @@ public class ChatMessageService {
 
 
     //채팅 조회
-    public List<ChatMessageResponseDto> getChatMessages(Long roomId,Long userId, Long lastMessageId, int limit) {
+    public ChatRoomResponseDto getChatMessages(Long roomId, Long userId, Long lastMessageId, int limit) {
 
         //스터디 그룹 존재 여부 검증
         if (!studyRoomRepository.existsById(roomId)) {
@@ -48,8 +50,16 @@ public class ChatMessageService {
             throw new AppException(ErrorCode.UNAUTHORIZED_STUDY_GROUP_ACCESS);
         }
 
+        //1.채팅 메시지 조회
+        List<ChatMessageResponseDto> chatMessages = chatMessageRepository.findMessagesByRoomId(roomId,lastMessageId,limit);
 
-        return chatMessageRepository.findMessagesByRoomId(roomId, lastMessageId, limit);
+        //2. 멤버 리스트 조회
+        List<StudyRoomMemberListResponseDto> members = studyMembersRepository.findByStudyRoomMember_RoomId(roomId);
+
+        //3. 통합해서 응답
+        return new ChatRoomResponseDto(chatMessages,members);
+
+
     }
 
     @Transactional

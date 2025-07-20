@@ -155,7 +155,7 @@ public class MeshSignalingHandler extends TextWebSocketHandler {
     }
 
 
-    //방 ID로 멤버 userID 리스트 반환하는 공통 메서드
+    //방 ID로 멤버 userID 리스트 반환하는 공통 메서드(현재는 수정해서 써야함)
     private List<Long> getMemberIds(Long roomId) {
         return studyMembersRepository.findByStudyRoom_RoomId(roomId)
                 .stream()

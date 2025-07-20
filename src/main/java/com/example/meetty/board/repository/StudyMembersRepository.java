@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface StudyMembersRepository extends JpaRepository<StudyMembersEntity,Long> {
+public interface StudyMembersRepository extends JpaRepository<StudyMembersEntity,Long>, StudyMembersRepositoryCustom {
     // 특정 스터디 그룹의 'ACTIVE' 상태 멤버 수를 세는 메서드
     int countByStudyRoomRoomIdAndStatus(Long roomId, MemberStatus status);
 
